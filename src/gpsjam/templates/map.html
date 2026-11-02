@@ -1,0 +1,712 @@
+<title>GPS-Störradar Europa</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: Vollbild-Radarschirm, Kopfkarte oben links, Zonenliste rechts, Zeitleiste unten.
+   Bewusst nur ein (dunkles) Thema: die Karte ist ein Instrument, kein Dokument. */
+:root {
+  --bg: #091216;
+  --sea: #0b161b;
+  --land: #122128;
+  --coast: #3a5a66;
+  --grid: #16262d;
+  --panel: rgba(9, 18, 22, 0.88);
+  --panel-line: #1f3640;
+  --ink: #e2ecec;
+  --ink-2: #a3b8bc;
+  --ink-3: #6f878d;
+  --cov: #1a3842;
+  --heat-1: #6e3420;
+  --heat-2: #b2482a;
+  --heat-3: #ec6a3e;
+  --heat-4: #ffb58a;
+  --focus: #7fd3e6;
+  --plane: #8fc1cf;
+  --f-ui: "IBM Plex Sans Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); overflow: hidden; }
+#app { position: relative; height: 100%; width: 100%; }
+#map { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+#map.dragging { cursor: grabbing; }
+
+.card { background: var(--panel); border: 1px solid var(--panel-line); border-radius: 6px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+
+#head {
+  position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px));
+  width: min(340px, calc(100% - 32px)); padding: 14px 16px 12px; display: grid; gap: 8px;
+}
+.eyebrow { font-family: var(--f-data); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); }
+.legend { display: grid; gap: 5px; margin-top: 2px; }
+.ramp { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 2px; height: 10px; }
+.ramp span { border-radius: 2px; }
+.ramp-l { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; font-family: var(--f-data); font-size: 10.5px; color: var(--ink-3); }
+.legend-note { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; }
+
+#clock { font-family: var(--f-data); font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--panel-line); }
+#clock-date { font-size: 18px; font-weight: 500; color: var(--ink); }
+#clock-time { font-size: 18px; color: var(--heat-3); }
+#clock-utc { font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.08em; }
+
+#zones {
+  position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  width: 290px; max-height: calc(100% - 210px); overflow: auto; padding: 12px 14px; display: grid; gap: 8px; align-content: start;
+}
+#zones h2 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 0.02em; }
+#zone-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+#zone-list button {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px;
+  padding: 6px 8px; border-radius: 4px;
+}
+#zone-list button:hover { background: var(--grid); }
+#zone-list button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.z-name { font-size: 13.5px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.z-ratio { font-family: var(--f-data); font-size: 12px; color: var(--heat-4); font-variant-numeric: tabular-nums; text-align: right; }
+.z-bar { grid-column: 1 / -1; height: 3px; background: var(--grid); border-radius: 2px; overflow: hidden; }
+.z-bar i { display: block; height: 100%; background: var(--heat-3); border-radius: 2px; }
+.z-meta { grid-column: 1 / -1; font-family: var(--f-data); font-size: 10.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.z-empty { font-size: 12.5px; color: var(--ink-3); }
+
+#dock {
+  position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 10px 14px 8px; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center;
+}
+.ctrls { display: flex; gap: 6px; align-items: center; }
+.btn {
+  appearance: none; border: 1px solid var(--panel-line); background: var(--grid); color: var(--ink); font-family: var(--f-data);
+  font-size: 12px; height: 32px; min-width: 32px; padding: 0 10px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn:hover { border-color: var(--coast); }
+.btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+#play { width: 40px; height: 40px; border-radius: 50%; background: var(--heat-2); border-color: var(--heat-3); }
+#play svg { width: 14px; height: 14px; fill: var(--ink); }
+.tl-wrap { min-width: 0; display: grid; gap: 2px; }
+.tl-title { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--ink-3); }
+.tl-title b { color: var(--ink-2); font-weight: 500; }
+#tl { width: 100%; height: 76px; display: block; cursor: ew-resize; touch-action: none; }
+#zoom { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(150px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 4px; }
+
+#tip {
+  position: absolute; pointer-events: none; padding: 8px 10px; font-size: 12.5px; line-height: 1.4; max-width: 240px; z-index: 5;
+  font-variant-numeric: tabular-nums;
+}
+#tip b { font-family: var(--f-data); font-weight: 500; color: var(--heat-4); }
+#tip .m { color: var(--ink-3); font-family: var(--f-data); font-size: 10.5px; }
+
+#detail-btn[aria-pressed="true"] { background: var(--heat-2); border-color: var(--heat-3); }
+#detail-panel { display: grid; gap: 10px; }
+#detail-panel h2 { text-wrap: balance; }
+#detail-panel p { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.d-keys { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.d-keys li { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.d-keys svg { width: 16px; height: 16px; display: block; }
+.d-keys b { font-family: var(--f-data); font-weight: 500; font-size: 13px; font-variant-numeric: tabular-nums; }
+.d-keys small { display: block; font-size: 11.5px; color: var(--ink-3); line-height: 1.3; }
+.d-note { font-size: 11.5px !important; color: var(--ink-3) !important; }
+
+@media (max-width: 760px) {
+  #zones { display: none; }
+  #zones.open { display: grid; top: auto; bottom: calc(182px + env(safe-area-inset-bottom, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); width: auto; max-height: 38%; }
+  h1 { font-size: 21px; }
+  .sub, .legend-note { display: none; }
+  #zoom { display: none; }
+  #dock { grid-template-columns: 1fr; }
+  .ctrls { justify-content: flex-start; }
+}
+@media (min-width: 761px) { #zones-toggle { display: none; } }
+</style>
+
+<div id="app">
+  <canvas id="map" aria-label="Karte der GPS-Störungen über Europa"></canvas>
+
+  <header id="head" class="card">
+    <div class="eyebrow">ADS-B · NIC &lt; 7 · H3-Zellen à 1.770 km²</div>
+    <h1>GPS-Störradar Europa</h1>
+    <p class="sub">Anteil der Flugzeuge je Zelle, deren GPS-Integrität (NIC) zusammenbricht. Rote Flächen pulsieren dort, wo sehr wahrscheinlich Störsender aktiv sind.</p>
+    <div class="legend" aria-label="Legende">
+      <div class="ramp"><span style="background:var(--cov)"></span><span style="background:var(--heat-1)"></span><span style="background:var(--heat-2)"></span><span style="background:var(--heat-3)"></span><span style="background:var(--heat-4)"></span></div>
+      <div class="ramp-l"><span>&lt;2 %</span><span>2 %</span><span>10 %</span><span>30 %</span><span>60 %+</span></div>
+      <div class="legend-note">Gleitendes 3-h-Fenster. Eine Zelle zählt erst als gestört, wenn mind. 2 Flugzeuge betroffen sind. Leere Flächen: kein Verkehr. Ring: Wabe überschreitet nach mind. 12 h ohne Störung die 10 % und bleibt gestört.</div>
+    </div>
+    <div id="clock" aria-live="off"><span id="clock-date">–</span><span id="clock-time">–</span><span id="clock-utc">UTC</span></div>
+  </header>
+
+  <aside id="zones" class="card" aria-label="Störzonen des Tages">
+    <h2 id="zones-h">Störzonen</h2>
+    <ul id="zone-list"></ul>
+    <div id="detail-panel" hidden>
+      <h2 id="detail-h"></h2>
+      <p id="detail-txt"></p>
+      <ul class="d-keys">
+        <li><svg viewBox="0 0 16 16"><path d="M8 1 13 14 8 11 3 14z" fill="var(--plane)"/></svg><span>Normal<small>NIC 7 oder besser</small></span><b id="d-n0">–</b></li>
+        <li><svg viewBox="0 0 16 16"><path d="M8 1 13 14 8 11 3 14z" fill="var(--heat-3)"/></svg><span>Gestört<small id="d-k1"></small></span><b id="d-n1">–</b></li>
+        <li><svg viewBox="0 0 16 16"><path d="M8 1 13 14 8 11 3 14z" fill="none" stroke="var(--heat-4)" stroke-width="1.6"/></svg><span>Nachwirkung<small id="d-k2"></small></span><b id="d-n2">–</b></li>
+      </ul>
+      <p class="d-note" id="detail-note"></p>
+    </div>
+  </aside>
+
+  <div id="zoom">
+    <button class="btn" id="zin" aria-label="Hineinzoomen">+</button>
+    <button class="btn" id="zout" aria-label="Herauszoomen">−</button>
+    <button class="btn" id="zreset" aria-label="Ansicht zurücksetzen">⌂</button>
+  </div>
+
+  <section id="dock" class="card" aria-label="Zeitsteuerung">
+    <div class="ctrls">
+      <button class="btn" id="play" aria-label="Abspielen"><svg viewBox="0 0 14 14" id="play-icon"><path d="M3 1.5v11l9-5.5z"/></svg></button>
+      <button class="btn" id="speed" aria-label="Geschwindigkeit">1×</button>
+      <button class="btn" id="zones-toggle" aria-expanded="false">Zonen</button>
+      <button class="btn" id="detail-btn" aria-pressed="false">Flugzeuge</button>
+    </div>
+    <div class="tl-wrap">
+      <div class="tl-title"><span id="tl-title"><b>Gestörte Fläche</b> (Zellen ≥ 10 %, Tsd. km²)</span><span id="tl-val"></span></div>
+      <canvas id="tl" aria-label="Zeitleiste der gestörten Fläche; klicken oder ziehen zum Springen"></canvas>
+    </div>
+  </section>
+
+  <div id="tip" class="card" hidden></div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+(() => {
+  const css = getComputedStyle(document.documentElement);
+  const tok = n => css.getPropertyValue(n).trim();
+  const C = { bg: tok('--bg'), sea: tok('--sea'), land: tok('--land'), coast: tok('--coast'), grid: tok('--grid'),
+              cov: tok('--cov'), h: [tok('--heat-1'), tok('--heat-2'), tok('--heat-3'), tok('--heat-4')],
+              ink2: tok('--ink-2'), ink3: tok('--ink-3') };
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- Daten entpacken ----------
+  const dec = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const NF = DATA.n_frames, NC = DATA.n_cells;
+  const RATIO = dec(DATA.ratio), NAC = dec(DATA.n_ac);
+  const NO = 255;
+  const zonesByDay = {};
+  DATA.zones.forEach(z => (zonesByDay[z.d] ||= []).push(z));
+
+  // ---------- Projektion (Web-Mercator) ----------
+  const RAD = Math.PI / 180;
+  const my = lat => Math.log(Math.tan(Math.PI / 4 + lat * RAD / 2));
+  const HOME = { lon0: -11, lon1: 46, lat0: 31, lat1: 67 };
+  const view = { cx: 0, cy: 0, k: 1 };
+  let W = 0, H = 0, DPR = 1;
+  const map = document.getElementById('map'), ctx = map.getContext('2d');
+  const glow = document.createElement('canvas'), gctx = glow.getContext('2d');
+  const baseCanvas = document.createElement('canvas'), bctx = baseCanvas.getContext('2d');
+  let baseKey = '';
+
+  function fitView(b) {
+    const x0 = b.lon0 * RAD, x1 = b.lon1 * RAD, y0 = my(b.lat0), y1 = my(b.lat1);
+    const narrow = W < 760;
+    const padT = narrow ? 150 : 40, padB = narrow ? 170 : 150, padL = narrow ? 16 : 380, padR = narrow ? 16 : 320;
+    const k = Math.min((W - padL - padR) / (x1 - x0), (H - padT - padB) / (y1 - y0));
+    return { k, cx: (x0 + x1) / 2 - ((padL - padR) / 2) / k, cy: (y0 + y1) / 2 + ((padT - padB) / 2) / k };
+  }
+  function fit(b) { Object.assign(view, fitView(b)); }
+  const px = lon => W / 2 + (lon * RAD - view.cx) * view.k;
+  const py = lat => H / 2 - (my(lat) - view.cy) * view.k;
+
+  // projizierte Hex-Polygone cachen (nur bei Ansichtsänderung neu)
+  let proj = null, centers = null, viewVersion = 0;
+  function project() {
+    viewVersion++;
+    centers = null;
+    proj = DATA.polys.map(p => { const a = new Float32Array(p.length); for (let i = 0; i < p.length; i += 2) { a[i] = px(p[i]); a[i + 1] = py(p[i + 1]); } return a; });
+  }
+
+  function resize() {
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    W = map.clientWidth; H = map.clientHeight;
+    map.width = W * DPR; map.height = H * DPR;
+    glow.width = Math.ceil(W / 2); glow.height = Math.ceil(H / 2);
+    baseCanvas.width = map.width; baseCanvas.height = map.height; baseKey = '';
+    if (!resize.done) { fit(HOME); resize.done = true; }
+    project(); drawTimeline(); draw();
+  }
+
+  // ---------- Farbe ----------
+  const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const STOPS = [[2, hex2rgb(C.h[0])], [10, hex2rgb(C.h[1])], [30, hex2rgb(C.h[2])], [60, hex2rgb(C.h[3])]];
+  function heat(v) {
+    if (v <= STOPS[0][0]) return STOPS[0][1];
+    for (let i = 1; i < STOPS.length; i++) if (v <= STOPS[i][0]) {
+      const [a, ca] = STOPS[i - 1], [b, cb] = STOPS[i], t = (v - a) / (b - a);
+      return ca.map((c, j) => Math.round(c + (cb[j] - c) * t));
+    }
+    return STOPS[STOPS.length - 1][1];
+  }
+
+  // ---------- Zeichnen ----------
+  let frame = 0, sub = 0;          // sub: 0..1 Überblendung zum nächsten Frame
+  const val = (f, c) => RATIO[f * NC + c];
+  function value(c) {
+    const a = val(frame, c), b = val(Math.min(frame + 1, NF - 1), c);
+    if (a === NO && b === NO) return -1;
+    if (a === NO) return sub > 0.5 ? b : -1;
+    if (b === NO) return sub < 0.5 ? a : -1;
+    return a + (b - a) * sub;
+  }
+  function path(g, a) { g.moveTo(a[0], a[1]); for (let i = 2; i < a.length; i += 2) g.lineTo(a[i], a[i + 1]); g.closePath(); }
+
+  function drawBase() {
+    ctx.fillStyle = C.sea; ctx.fillRect(0, 0, W, H);
+    // Gradnetz alle 5°
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.beginPath();
+    for (let lon = -40; lon <= 65; lon += 5) { ctx.moveTo(px(lon), py(20)); ctx.lineTo(px(lon), py(78)); }
+    for (let lat = 20; lat <= 78; lat += 5) { ctx.moveTo(px(-40), py(lat)); ctx.lineTo(px(65), py(lat)); }
+    ctx.stroke();
+    drawLand();
+  }
+  function landPath() {
+    ctx.beginPath();
+    for (const l of DATA.land) { ctx.moveTo(px(l[0]), py(l[1])); for (let i = 2; i < l.length; i += 2) ctx.lineTo(px(l[i]), py(l[i + 1])); ctx.closePath(); }
+  }
+  function drawLand() { landPath(); ctx.fillStyle = C.land; ctx.fill(); }
+  function drawBorders() { landPath(); ctx.strokeStyle = C.coast; ctx.lineWidth = 0.9; ctx.stroke(); }
+
+  let cur = new Float32Array(NC);
+  function draw() {
+    if (!proj) return;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (detail) { drawDetail(); return; }
+    drawBase();
+    // Verkehrsabdeckung (ungestört)
+    ctx.fillStyle = C.cov; ctx.beginPath();
+    for (let c = 0; c < NC; c++) { const v = value(c); cur[c] = v; if (v >= 0 && v < 2) path(ctx, proj[c]); }
+    ctx.fill();
+    // Störung, nach Stärke sortiert (stärkste oben)
+    const hot = [];
+    for (let c = 0; c < NC; c++) if (cur[c] >= 2) hot.push(c);
+    hot.sort((a, b) => cur[a] - cur[b]);
+    for (const c of hot) { const [r, g, b] = heat(cur[c]); ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.beginPath(); path(ctx, proj[c]); ctx.fill(); }
+    // Glühen: halbe Auflösung, weichgezeichnet, additiv
+    gctx.setTransform(1, 0, 0, 1, 0, 0); gctx.clearRect(0, 0, glow.width, glow.height); gctx.setTransform(0.5, 0, 0, 0.5, 0, 0);
+    for (const c of hot) if (cur[c] >= 10) {
+      const [r, g, b] = heat(cur[c]); gctx.globalAlpha = Math.min(1, cur[c] / 60);
+      gctx.fillStyle = `rgb(${r},${g},${b})`; gctx.beginPath(); path(gctx, proj[c]); gctx.fill();
+    }
+    gctx.globalAlpha = 1;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.filter = 'blur(10px)'; ctx.globalAlpha = 0.75;
+    ctx.drawImage(glow, 0, 0, W, H); ctx.restore();
+    drawBorders();
+    drawRings();
+    if (hoverCell >= 0 && cur[hoverCell] >= 0) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.beginPath(); path(ctx, proj[hoverCell]); ctx.stroke(); }
+  }
+
+  // ---------- Ringe beim Aufflammen (Zeitpunkte vorberechnet, siehe flare_onsets) ----------
+  const RING_LIFE = 6;  // Stunden der Zeitachse
+  const onsetsAt = new Map();
+  DATA.onsets.forEach(([f, c]) => { if (!onsetsAt.has(f)) onsetsAt.set(f, []); onsetsAt.get(f).push(c); });
+  function cellCenters() {
+    return centers ||= proj.map(a => { let x = 0, y = 0; for (let i = 0; i < a.length; i += 2) { x += a[i]; y += a[i + 1]; } return [x / (a.length / 2), y / (a.length / 2)]; });
+  }
+  function drawRings() {
+    const now = frame + sub, pts = cellCenters();
+    ctx.save(); ctx.strokeStyle = C.h[3];
+    for (let f = Math.max(0, frame - RING_LIFE); f <= frame; f++) {
+      const list = onsetsAt.get(f), age = (now - f) / RING_LIFE;
+      if (!list || age >= 1) continue;
+      ctx.globalAlpha = Math.pow(1 - age, 1.4); ctx.lineWidth = 2.5 - 1.5 * age;
+      ctx.beginPath();
+      for (const c of list) { const [x, y] = pts[c], r = 8 + 42 * age; ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 2 * Math.PI); }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ---------- Zeit ----------
+  const fmtD = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+  const fmtT = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  const nf = new Intl.NumberFormat('de-DE');
+  const tOf = f => new Date((DATA.t0 + f * 3600) * 1000);
+  const dayKey = f => tOf(f).toISOString().slice(0, 10);
+  let lastDay = null;
+
+  function setFrame(f, s = 0) {
+    frame = Math.max(0, Math.min(NF - 1, f)); sub = s;
+    const t = tOf(frame);
+    document.getElementById('clock-date').textContent = fmtD.format(t);
+    document.getElementById('clock-time').textContent = fmtT.format(t);
+    document.getElementById('tl-val').textContent = nf.format(Math.round(DATA.timeline[frame] / 1000)) + ' Tsd. km²';
+    const dk = dayKey(frame); if (dk !== lastDay) { lastDay = dk; renderZones(dk); }
+    draw(); drawTimeline();
+    if (hoverCell >= 0) showTip();
+  }
+
+  function renderZones(dk) {
+    const list = document.getElementById('zone-list');
+    const zs = (zonesByDay[dk] || []).slice(0, 12);
+    document.getElementById('zones-h').textContent = `Störzonen am ${fmtD.format(new Date(dk + 'T00:00:00Z')).replace(/^\w+\.?,\s*/, '')}`;
+    list.replaceChildren();
+    if (!zs.length) { const li = document.createElement('li'); li.className = 'z-empty'; li.textContent = 'Keine zusammenhängende Störzone an diesem Tag.'; list.append(li); return; }
+    for (const z of zs) {
+      const li = document.createElement('li'), b = document.createElement('button');
+      b.innerHTML = `<span class="z-name"></span><span class="z-ratio">${Math.round(z.ratio * 100)} %</span>
+        <span class="z-bar"><i style="width:${Math.min(100, z.ratio * 100)}%"></i></span>
+        <span class="z-meta">${nf.format(Math.round(z.area / 1000))} Tsd. km² · ${nf.format(z.n_ac)} Flugzeuge</span>`;
+      b.querySelector('.z-name').textContent = z.name;
+      b.title = 'Karte auf diese Zone zentrieren';
+      b.onclick = () => flyTo(z.lon, z.lat);
+      li.append(b); list.append(li);
+    }
+  }
+
+  let flight = 0;
+  function flyView(target, done) {
+    const id = ++flight, sx = view.cx, sy = view.cy, sk = view.k, t0 = performance.now(), dur = reduced ? 0 : 700;
+    const step = now => {
+      if (id !== flight) return;
+      const t = dur ? Math.min(1, (now - t0) / dur) : 1, e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      view.cx = sx + (target.cx - sx) * e; view.cy = sy + (target.cy - sy) * e; view.k = sk + (target.k - sk) * e;
+      project(); draw();
+      if (t < 1) requestAnimationFrame(step); else if (done) done();
+    };
+    requestAnimationFrame(step);
+  }
+  function flyTo(lon, lat) { flyView({ cx: lon * RAD, cy: my(lat), k: Math.max(view.k, 1.8 * kHome) }); }
+
+  // ---------- Detailansicht: einzelne Flugzeuge ----------
+  const D = DATA.detail, DETAIL_RATE = 120;  // simulierte Sekunden je echter Sekunde: 1 h in 30 s
+  const TRAIL_LONG = 900, TRAIL_SHORT = 180;
+  const DETAIL_LEAD = 60;  // am Fensterrand beginnen und enden alle Spuren künstlich: dort nicht zählen und nicht starten
+  const fmtS = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+  let detail = false, dT = 0, tracks = null, dCounts = null, dMax = 1, savedFrame = 0, dHover = null, lastMinute = -1;
+  const dBase = (D.t0 - DATA.t0) / 3600;
+
+  function decodeTracks() {
+    tracks = D.tracks.map(a => {
+      const n = a.length / 5, t = new Float64Array(n), x = new Float32Array(n), y = new Float32Array(n), nic = new Uint8Array(n), g = new Uint8Array(n);
+      for (let i = 0; i < n; i++) { t[i] = a[i * 5]; x[i] = a[i * 5 + 1] / 1000; y[i] = a[i * 5 + 2] / 1000; nic[i] = a[i * 5 + 3]; g[i] = a[i * 5 + 4]; }
+      return { t, x, y, nic, g, n };
+    });
+    const minutes = Math.ceil(D.dur / 60);
+    dCounts = new Uint16Array(minutes + 1);
+    for (let m = 0; m <= minutes; m++) { const c = countsAt(Math.max(DETAIL_LEAD, Math.min(D.dur - DETAIL_LEAD, m * 60))); dCounts[m] = c[1] + c[2]; }
+    dMax = Math.max(...dCounts) || 1;
+  }
+  const stateOf = (tr, i) => tr.g[i] ? 2 : tr.nic[i] < DATA.nic_bad ? 1 : 0;
+  function indexAt(tr, T) {   // letzter Punkt mit t <= T, -1 falls die Spur nicht aktiv ist
+    if (T < tr.t[0] || T >= tr.t[tr.n - 1]) return -1;
+    let lo = 0, hi = tr.n - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (tr.t[m] <= T) lo = m; else hi = m; }
+    return lo;
+  }
+  function countsAt(T) {
+    const c = [0, 0, 0];
+    for (const tr of tracks) { const i = indexAt(tr, T); if (i >= 0) c[stateOf(tr, i)]++; }
+    return c;
+  }
+  function planeMark(g, x, y, ang, s) {
+    const c = Math.cos(ang), n = Math.sin(ang), pt = (a, b) => [x + a * c - b * n, y + a * n + b * c];
+    const [ax, ay] = pt(s * 1.2, 0), [bx, by] = pt(-s, s * .85), [cx, cy] = pt(-s * .45, 0), [dx, dy] = pt(-s, -s * .85);
+    g.moveTo(ax, ay); g.lineTo(bx, by); g.lineTo(cx, cy); g.lineTo(dx, dy); g.closePath();
+  }
+  function drawDetailBase() {
+    const key = `${viewVersion}:${frame}:${Math.round(sub * 12)}`;
+    if (key === baseKey) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(baseCanvas, 0, 0); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); return; }
+    drawBase();
+    ctx.save(); ctx.globalAlpha = 0.5;
+    for (let c = 0; c < NC; c++) {
+      const v = value(c); cur[c] = v;
+      if (v >= 2) { const [r, g, b] = heat(v); ctx.fillStyle = `rgb(${r},${g},${b})`; ctx.beginPath(); path(ctx, proj[c]); ctx.fill(); }
+    }
+    ctx.restore();
+    drawBorders();
+    bctx.setTransform(1, 0, 0, 1, 0, 0); bctx.drawImage(map, 0, 0); baseKey = key;
+  }
+  function drawDetail() {
+    drawDetailBase();
+    const T = dT, trails = [new Path2D(), new Path2D(), new Path2D()], marks = [new Path2D(), new Path2D(), new Path2D()];
+    dPlanes = [];
+    for (const tr of tracks) {
+      const i = indexAt(tr, T);
+      if (i < 0) continue;
+      const f = (T - tr.t[i]) / (tr.t[i + 1] - tr.t[i]), lon = tr.x[i] + (tr.x[i + 1] - tr.x[i]) * f, lat = tr.y[i] + (tr.y[i + 1] - tr.y[i]) * f;
+      const sx = px(lon), sy = py(lat), state = stateOf(tr, i);
+      // Spur: lang, wenn zuletzt eine Störung dabei war, sonst kurz
+      let j = i, touched = state !== 0;
+      while (j > 0 && tr.t[j - 1] >= T - TRAIL_LONG) { j--; if (stateOf(tr, j) !== 0) touched = true; }
+      const from = touched ? T - TRAIL_LONG : T - TRAIL_SHORT;
+      let xPrev = sx, yPrev = sy;
+      for (let k = i; k >= 0 && tr.t[k] >= from; k--) {
+        const xk = px(tr.x[k]), yk = py(tr.y[k]), p = trails[stateOf(tr, k)];
+        p.moveTo(xPrev, yPrev); p.lineTo(xk, yk); xPrev = xk; yPrev = yk;
+      }
+      const ang = Math.atan2(py(tr.y[i + 1]) - py(tr.y[i]), px(tr.x[i + 1]) - px(tr.x[i]));
+      planeMark(marks[state], sx, sy, ang, state === 0 ? 3.4 : 5.2);
+      dPlanes.push([sx, sy, tr.nic[i], state]);
+    }
+    const plane = tok('--plane');
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 1; ctx.strokeStyle = plane; ctx.globalAlpha = 0.35; ctx.stroke(trails[0]);
+    ctx.lineWidth = 1.8; ctx.strokeStyle = C.h[2]; ctx.globalAlpha = 0.8; ctx.stroke(trails[1]);
+    ctx.setLineDash([2, 4]); ctx.strokeStyle = C.h[3]; ctx.stroke(trails[2]); ctx.setLineDash([]);
+    ctx.globalAlpha = 0.85; ctx.fillStyle = plane; ctx.fill(marks[0]);
+    ctx.globalAlpha = 1; ctx.fillStyle = C.h[2]; ctx.fill(marks[1]);
+    ctx.lineWidth = 1.6; ctx.strokeStyle = C.h[3]; ctx.fillStyle = C.sea; ctx.fill(marks[2]); ctx.strokeStyle = C.h[3]; ctx.stroke(marks[2]);
+    dHover = lastPt && mapHovered ? nearestPlane() : null;
+    if (dHover) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(dHover[0], dHover[1], 10, 0, 2 * Math.PI); ctx.stroke(); }
+  }
+  let dPlanes = [], mapHovered = false;
+  function nearestPlane() {
+    let best = null, bd = 196;  // 14 px Radius
+    for (const p of dPlanes) { const d = (p[0] - lastPt[0]) ** 2 + (p[1] - lastPt[1]) ** 2; if (d < bd) { bd = d; best = p; } }
+    return best;
+  }
+  function setDetailTime(T) {
+    dT = Math.max(DETAIL_LEAD, Math.min(D.dur - DETAIL_LEAD, T));
+    frame = Math.max(0, Math.min(NF - 1, dBase + Math.floor(dT / 3600))); sub = (dT % 3600) / 3600;
+    const t = new Date((D.t0 + dT) * 1000);
+    document.getElementById('clock-date').textContent = fmtD.format(t);
+    document.getElementById('clock-time').textContent = fmtS.format(t);
+    const minute = Math.floor(dT / 60);
+    if (minute !== lastMinute) {
+      lastMinute = minute;
+      const c = countsAt(dT);
+      ['d-n0', 'd-n1', 'd-n2'].forEach((id, i) => { document.getElementById(id).textContent = nf.format(c[i]); });
+      document.getElementById('tl-val').textContent = nf.format(c[1] + c[2]) + ' von ' + nf.format(c[0] + c[1] + c[2]) + ' Flugzeugen';
+    }
+    draw(); drawTimeline();
+    if (mapHovered) planeTip();
+  }
+  function setDetail(on) {
+    if (on === detail) return;
+    const panel = document.getElementById('detail-panel'), list = document.getElementById('zone-list'), zh = document.getElementById('zones-h');
+    const btn = document.getElementById('detail-btn');
+    setPlaying(false); hoverCell = -1; dHover = null; mapHovered = false; hideTip();
+    if (on) {
+      if (!tracks) decodeTracks();
+      savedFrame = frame; detail = true; lastMinute = -1; baseKey = '';
+      panel.hidden = false; list.hidden = true; zh.hidden = true;
+      document.getElementById('tl-title').innerHTML = '<b>Flugzeuge mit NIC &lt; ' + DATA.nic_bad + '</b> im Datenausschnitt';
+      btn.textContent = 'Gesamtkarte'; btn.setAttribute('aria-pressed', 'true');
+      setDetailTime(DETAIL_LEAD);
+      flyView(fitView(D.box), () => { if (!reduced && detail) setPlaying(true); });
+    } else {
+      detail = false; panel.hidden = true; list.hidden = false; zh.hidden = false;
+      document.getElementById('tl-title').innerHTML = '<b>Gestörte Fläche</b> (Zellen ≥ 10 %, Tsd. km²)';
+      btn.textContent = 'Flugzeuge'; btn.setAttribute('aria-pressed', 'false');
+      setFrame(savedFrame);
+      flyView(fitView(HOME), () => { if (!reduced && !detail) setPlaying(true); });
+    }
+  }
+  function detailFromHash() { setDetail(location.hash === '#ostsee'); }
+  document.getElementById('detail-btn').onclick = () => {
+    const on = !detail;
+    try { location.hash = on ? 'ostsee' : ''; } catch (e) { /* Hash nicht verfügbar: Ansicht trotzdem wechseln */ }
+    setDetail(on);
+  };
+  addEventListener('hashchange', detailFromHash);
+
+  // ---------- Abspielen ----------
+  let playing = false, speedIdx = 0, acc = 0, lastTs = 0;
+  const SPEEDS = [[1, 140], [2, 70], [4, 35]];  // ms pro Stunde
+  const playBtn = document.getElementById('play'), icon = document.getElementById('play-icon');
+  function setPlaying(p) {
+    playing = p; playBtn.setAttribute('aria-label', p ? 'Pausieren' : 'Abspielen');
+    icon.innerHTML = p ? '<path d="M3 1.5h3v11H3zM8 1.5h3v11H8z"/>' : '<path d="M3 1.5v11l9-5.5z"/>';
+    if (p) { lastTs = 0; requestAnimationFrame(tick); }
+  }
+  function tick(ts) {
+    if (!playing) return;
+    const dt = lastTs ? ts - lastTs : 0; lastTs = ts;
+    if (detail) {
+      const T = dT + dt / 1000 * DETAIL_RATE * SPEEDS[speedIdx][0];
+      setDetailTime(T >= D.dur - DETAIL_LEAD ? DETAIL_LEAD : T);
+      requestAnimationFrame(tick);
+      return;
+    }
+    acc += dt;
+    const msPer = SPEEDS[speedIdx][1];
+    let f = frame, s = acc / msPer;
+    while (s >= 1) { f++; s -= 1; acc -= msPer; }
+    if (f >= NF - 1) { f = 0; s = 0; acc = 0; }
+    setFrame(f, s);
+    requestAnimationFrame(tick);
+  }
+  playBtn.onclick = () => setPlaying(!playing);
+  document.getElementById('speed').onclick = e => { speedIdx = (speedIdx + 1) % SPEEDS.length; e.currentTarget.textContent = SPEEDS[speedIdx][0] + '×'; };
+  const zt = document.getElementById('zones-toggle');
+  zt.onclick = () => { const o = document.getElementById('zones').classList.toggle('open'); zt.setAttribute('aria-expanded', o); };
+  addEventListener('keydown', e => {
+    if (e.target.closest('button') && e.key === ' ') return;
+    if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+    if (detail) {
+      if (e.key === 'ArrowRight') setDetailTime(dT + (e.shiftKey ? 600 : 60));
+      if (e.key === 'ArrowLeft') setDetailTime(dT - (e.shiftKey ? 600 : 60));
+      return;
+    }
+    if (e.key === 'ArrowRight') setFrame(frame + (e.shiftKey ? 24 : 1));
+    if (e.key === 'ArrowLeft') setFrame(frame - (e.shiftKey ? 24 : 1));
+  });
+
+  // ---------- Zeitleiste ----------
+  const tl = document.getElementById('tl'), tctx = tl.getContext('2d');
+  const tMax = Math.max(...DATA.timeline) || 1;
+  let tlHover = -1;
+  function drawTimeline() {
+    const w = tl.clientWidth, h = tl.clientHeight; if (!w) return;
+    tl.width = w * DPR; tl.height = h * DPR; tctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const padL = 34, padB = 16, pw = w - padL - 4, ph = h - padB - 4;
+    drawTimeline.X = { padL, pw };
+    if (detail) { drawDetailTimeline(w, h, padL, pw, ph); return; }
+    const X = f => padL + (f / (NF - 1)) * pw, Y = v => 4 + ph - (v / tMax) * ph;
+    tctx.clearRect(0, 0, w, h);
+    tctx.font = '10.5px ' + tok('--f-data'); tctx.fillStyle = C.ink3; tctx.strokeStyle = C.grid; tctx.lineWidth = 1;
+    const stepK = Math.pow(10, Math.floor(Math.log10(tMax / 1000))) * 1000;
+    const gstep = tMax / stepK > 4 ? stepK * 2 : stepK;
+    tctx.textAlign = 'right'; tctx.textBaseline = 'middle';
+    for (let v = 0; v <= tMax; v += gstep) { tctx.beginPath(); tctx.moveTo(padL, Math.round(Y(v)) + .5); tctx.lineTo(w - 4, Math.round(Y(v)) + .5); tctx.stroke(); tctx.fillText(nf.format(v / 1000), padL - 6, Y(v)); }
+    // Tagesmarken
+    tctx.textAlign = 'center'; tctx.textBaseline = 'top';
+    const days = Math.round(NF / 24), every = pw / days < 44 ? 2 : 1;
+    for (let f = 0; f < NF; f++) if (tOf(f).getUTCHours() === 0) {
+      tctx.beginPath(); tctx.moveTo(Math.round(X(f)) + .5, 4); tctx.lineTo(Math.round(X(f)) + .5, 4 + ph); tctx.stroke();
+      const d = tOf(f); if ((d.getUTCDate() % every) === 0 && X(f) + 14 < w) tctx.fillText(String(d.getUTCDate()).padStart(2, '0') + '.' + String(d.getUTCMonth() + 1).padStart(2, '0') + '.', X(f) + 14, 4 + ph + 3);
+    }
+    // Fläche
+    const grad = tctx.createLinearGradient(0, 4, 0, 4 + ph); grad.addColorStop(0, C.h[2] + 'cc'); grad.addColorStop(1, C.h[0] + '33');
+    tctx.beginPath(); tctx.moveTo(X(0), Y(0));
+    DATA.timeline.forEach((v, f) => tctx.lineTo(X(f), Y(v)));
+    tctx.lineTo(X(NF - 1), Y(0)); tctx.closePath(); tctx.fillStyle = grad; tctx.fill();
+    tctx.beginPath(); DATA.timeline.forEach((v, f) => f ? tctx.lineTo(X(f), Y(v)) : tctx.moveTo(X(f), Y(v)));
+    tctx.strokeStyle = C.h[2]; tctx.lineWidth = 1.5; tctx.stroke();
+    // Abspielkopf
+    const hx = X(frame + sub);
+    tctx.strokeStyle = '#ffffff'; tctx.lineWidth = 1.5; tctx.beginPath(); tctx.moveTo(hx, 2); tctx.lineTo(hx, 4 + ph); tctx.stroke();
+    tctx.fillStyle = '#ffffff'; tctx.beginPath(); tctx.arc(hx, Y(DATA.timeline[frame]), 3.5, 0, 7); tctx.fill();
+    if (tlHover >= 0) { tctx.strokeStyle = C.ink2; tctx.setLineDash([3, 3]); tctx.beginPath(); tctx.moveTo(X(tlHover), 2); tctx.lineTo(X(tlHover), 4 + ph); tctx.stroke(); tctx.setLineDash([]); }
+    drawTimeline.X = { padL, pw };
+  }
+  function drawDetailTimeline(w, h, padL, pw, ph) {
+    const last = dCounts.length - 1, X = m => padL + (m / last) * pw, Y = v => 4 + ph - (v / dMax) * ph;
+    tctx.clearRect(0, 0, w, h);
+    tctx.font = '10.5px ' + tok('--f-data'); tctx.fillStyle = C.ink3; tctx.strokeStyle = C.grid; tctx.lineWidth = 1;
+    const gstep = dMax > 100 ? 50 : dMax > 40 ? 20 : 10;
+    tctx.textAlign = 'right'; tctx.textBaseline = 'middle';
+    for (let v = 0; v <= dMax; v += gstep) { tctx.beginPath(); tctx.moveTo(padL, Math.round(Y(v)) + .5); tctx.lineTo(w - 4, Math.round(Y(v)) + .5); tctx.stroke(); tctx.fillText(nf.format(v), padL - 6, Y(v)); }
+    tctx.textAlign = 'center'; tctx.textBaseline = 'top';
+    for (let m = 0; m <= last; m += 30) {
+      tctx.beginPath(); tctx.moveTo(Math.round(X(m)) + .5, 4); tctx.lineTo(Math.round(X(m)) + .5, 4 + ph); tctx.stroke();
+      if (X(m) + 16 < w) tctx.fillText(fmtS.format(new Date((D.t0 + m * 60) * 1000)), Math.max(padL + 14, X(m)), 4 + ph + 3);
+    }
+    tctx.beginPath(); tctx.moveTo(X(0), Y(0)); dCounts.forEach((v, m) => tctx.lineTo(X(m), Y(v))); tctx.lineTo(X(last), Y(0)); tctx.closePath();
+    const grad = tctx.createLinearGradient(0, 4, 0, 4 + ph); grad.addColorStop(0, C.h[2] + 'cc'); grad.addColorStop(1, C.h[0] + '33');
+    tctx.fillStyle = grad; tctx.fill();
+    tctx.beginPath(); dCounts.forEach((v, m) => m ? tctx.lineTo(X(m), Y(v)) : tctx.moveTo(X(m), Y(v)));
+    tctx.strokeStyle = C.h[2]; tctx.lineWidth = 1.5; tctx.stroke();
+    const m = dT / 60, hx = X(m);
+    tctx.strokeStyle = '#ffffff'; tctx.lineWidth = 1.5; tctx.beginPath(); tctx.moveTo(hx, 2); tctx.lineTo(hx, 4 + ph); tctx.stroke();
+    tctx.fillStyle = '#ffffff'; tctx.beginPath(); tctx.arc(hx, Y(dCounts[Math.min(last, Math.round(m))]), 3.5, 0, 7); tctx.fill();
+    if (tlHover >= 0) { tctx.strokeStyle = C.ink2; tctx.setLineDash([3, 3]); tctx.beginPath(); tctx.moveTo(X(tlHover * last), 2); tctx.lineTo(X(tlHover * last), 4 + ph); tctx.stroke(); tctx.setLineDash([]); }
+  }
+  const tlShare = e => { const r = tl.getBoundingClientRect(), { padL, pw } = drawTimeline.X; return Math.max(0, Math.min(1, (e.clientX - r.left - padL) / pw)); };
+  const tlFrame = e => { const r = tl.getBoundingClientRect(), { padL, pw } = drawTimeline.X; return Math.round(Math.max(0, Math.min(1, (e.clientX - r.left - padL) / pw)) * (NF - 1)); };
+  let tlDrag = false;
+  tl.addEventListener('pointerdown', e => {
+    tlDrag = true; tl.setPointerCapture(e.pointerId);
+    if (detail) setDetailTime(tlShare(e) * D.dur); else setFrame(tlFrame(e));
+  });
+  tl.addEventListener('pointermove', e => {
+    if (detail) {
+      const share = tlShare(e), T = share * D.dur, m = Math.min(dCounts.length - 1, Math.round(T / 60)); tlHover = share;
+      if (tlDrag) setDetailTime(T); else drawTimeline();
+      tipAt(e.clientX, e.clientY - 70, `<span class="m">${fmtS.format(new Date((D.t0 + T) * 1000))} UTC</span><br><b>${nf.format(dCounts[m])}</b> Flugzeuge mit NIC &lt; ${DATA.nic_bad}`);
+      return;
+    }
+    const f = tlFrame(e); tlHover = f;
+    if (tlDrag) setFrame(f); else drawTimeline();
+    const t = tOf(f); tipAt(e.clientX, e.clientY - 70, `<span class="m">${fmtD.format(t)} · ${fmtT.format(t)} UTC</span><br><b>${nf.format(Math.round(DATA.timeline[f] / 1000))} Tsd. km²</b> gestört`);
+  });
+  tl.addEventListener('pointerup', () => tlDrag = false);
+  tl.addEventListener('pointerleave', () => { tlHover = -1; drawTimeline(); hideTip(); });
+
+  // ---------- Karte: Pan / Zoom / Hover ----------
+  let kHome = 1, drag = null, hoverCell = -1, lastPt = null;
+  const pointers = new Map();
+  function zoomAt(f, sx, sy) {
+    const nk = Math.max(kHome * 0.6, Math.min(kHome * 12, view.k * f)); f = nk / view.k;
+    view.cx += (sx - W / 2) / view.k * (1 - 1 / f); view.cy -= (sy - H / 2) / view.k * (1 - 1 / f); view.k = nk;
+    project(); draw();
+  }
+  map.addEventListener('wheel', e => { e.preventDefault(); const r = map.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  map.addEventListener('pointerdown', e => { pointers.set(e.pointerId, [e.clientX, e.clientY]); map.setPointerCapture(e.pointerId); drag = [e.clientX, e.clientY]; map.classList.add('dragging'); });
+  map.addEventListener('pointermove', e => {
+    const r = map.getBoundingClientRect();
+    if (pointers.has(e.pointerId)) {
+      const prev = pointers.get(e.pointerId); pointers.set(e.pointerId, [e.clientX, e.clientY]);
+      if (pointers.size === 2) {
+        const [a, b] = [...pointers.values()], o = [...pointers.entries()].find(([id]) => id !== e.pointerId)[1];
+        const d1 = Math.hypot(prev[0] - o[0], prev[1] - o[1]), d2 = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        if (d1 > 0) zoomAt(d2 / d1, (a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top);
+        return;
+      }
+      view.cx -= (e.clientX - prev[0]) / view.k; view.cy += (e.clientY - prev[1]) / view.k; project(); draw(); hideTip(); return;
+    }
+    lastPt = [e.clientX - r.left, e.clientY - r.top];
+    if (detail) { mapHovered = true; draw(); planeTip(); return; }
+    hoverCell = hit(...lastPt); draw(); hoverCell >= 0 ? showTip() : hideTip();
+  });
+  const up = e => { pointers.delete(e.pointerId); if (!pointers.size) { drag = null; map.classList.remove('dragging'); } };
+  map.addEventListener('pointerup', up); map.addEventListener('pointercancel', up);
+  map.addEventListener('pointerleave', () => { hoverCell = -1; dHover = null; mapHovered = false; hideTip(); draw(); });
+  map.addEventListener('dblclick', e => { const r = map.getBoundingClientRect(); zoomAt(2, e.clientX - r.left, e.clientY - r.top); });
+  document.getElementById('zin').onclick = () => zoomAt(1.5, W / 2, H / 2);
+  document.getElementById('zout').onclick = () => zoomAt(1 / 1.5, W / 2, H / 2);
+  document.getElementById('zreset').onclick = () => { fit(detail ? D.box : HOME); project(); draw(); };
+  const STATE_TXT = ['Normal', 'Gestört', 'Nachwirkung'];
+  function planeTip() {
+    if (!dHover) { hideTip(); return; }
+    const r = map.getBoundingClientRect();
+    tipAt(lastPt[0] + r.left, lastPt[1] + r.top, `<span class="m">${STATE_TXT[dHover[3]]}</span><br>gemeldeter Wert: <b>NIC ${dHover[2]}</b>`);
+  }
+
+  function inside(a, x, y) {
+    let c = false;
+    for (let i = 0, j = a.length - 2; i < a.length; j = i, i += 2)
+      if ((a[i + 1] > y) !== (a[j + 1] > y) && x < (a[j] - a[i]) * (y - a[i + 1]) / (a[j + 1] - a[i + 1]) + a[i]) c = !c;
+    return c;
+  }
+  function hit(x, y) { for (let c = 0; c < NC; c++) if (cur[c] >= 0 && inside(proj[c], x, y)) return c; return -1; }
+
+  const tip = document.getElementById('tip');
+  function tipAt(x, y, html) {
+    tip.innerHTML = html; tip.hidden = false;
+    const r = document.getElementById('app').getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+    tip.style.left = Math.max(8, Math.min(r.width - tw - 8, x - r.left + 14)) + 'px';
+    tip.style.top = Math.max(8, Math.min(r.height - th - 8, y - r.top + 14)) + 'px';
+  }
+  function showTip() {
+    if (!lastPt || hoverCell < 0) return;
+    const v = val(frame, hoverCell), n = NAC[frame * NC + hoverCell];
+    const p = DATA.polys[hoverCell];
+    let la = 0, lo = 0; for (let i = 0; i < p.length; i += 2) { lo += p[i]; la += p[i + 1]; } la /= p.length / 2; lo /= p.length / 2;
+    const r = map.getBoundingClientRect();
+    tipAt(lastPt[0] + r.left, lastPt[1] + r.top, v === NO ? `<span class="m">${la.toFixed(1)}° N · ${lo.toFixed(1)}° O</span><br>zu wenig Verkehr in diesem Fenster`
+      : `<span class="m">${la.toFixed(1)}° N · ${lo.toFixed(1)}° O</span><br><b>${v} %</b> der Flugzeuge mit gestörtem GPS<br><span class="m">${nf.format(n)} Flugzeug-Stunden im 3-h-Fenster</span>`);
+  }
+  function hideTip() { tip.hidden = true; }
+
+  // ---------- Start ----------
+  addEventListener('resize', () => { const k0 = view.k; resize(); });
+  resize(); kHome = view.k;
+  // Startbild: 12 Uhr UTC am ersten Tag (dichter Tagesverkehr), damit schon das Standbild aussagekräftig ist
+  setFrame(Math.min(NF - 1, 12));
+  const start = new Date(D.t0 * 1000), end = new Date((D.t0 + D.dur) * 1000);
+  document.getElementById('detail-h').textContent = `${D.name}, ${fmtD.format(start).replace(/^\w+\.?,\s*/, '')}, ${fmtS.format(start)}–${fmtS.format(end)} UTC`;
+  document.getElementById('detail-txt').textContent = 'Echte Flugspuren, 1 Stunde läuft in 30 Sekunden. Die Waben im Hintergrund zeigen den Anteil gestörter Flugzeuge.';
+  document.getElementById('d-k1').textContent = `NIC unter ${DATA.nic_bad}, bis ${nf.format(DATA.afterglow_km)} km nach Störbeginn`;
+  document.getElementById('d-k2').textContent = `noch NIC unter ${DATA.nic_bad}, über ${nf.format(DATA.afterglow_km)} km nach Störbeginn`;
+  document.getElementById('detail-note').textContent = `Ausgewählt: das Zwei-Stunden-Fenster am Tag mit den meisten betroffenen Flugzeugen (${nf.format(D.affected)}), also kein Durchschnitt. Die Zahlen gelten für 50–64° N, 5–36° O, also auch knapp außerhalb des Bildes. Flugzeuge ohne Meldung für mehr als 5 Minuten verschwinden kurz. Kennungen sind nicht enthalten.`;
+  if (location.hash === '#ostsee') detailFromHash();
+  else if (!reduced) setPlaying(true);
+})();
+</script>

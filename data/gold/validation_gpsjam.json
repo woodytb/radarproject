@@ -1,0 +1,229 @@
+{
+  "source": "gpsjam.org",
+  "days": 14,
+  "overall": {
+    "cell_days": 85671,
+    "both": 2087,
+    "only_ours": 2310,
+    "only_gpsjam": 557,
+    "neither": 80717,
+    "share_ours_confirmed": 0.4746,
+    "share_gpsjam_found": 0.7893,
+    "kappa": 0.5765,
+    "spearman": 0.6343
+  },
+  "neighbour_tolerant": 0.7653,
+  "only_ours_yellow_at_gpsjam": 0.6693,
+  "ours_red_or_yellow_at_gpsjam": 0.8262,
+  "median_ratio_gpsjam_to_ours_in_jammed": 0.483,
+  "daily_area_km2": {
+    "ours": 521216,
+    "gpsjam": 317166,
+    "spearman": 0.771
+  },
+  "region_rank_spearman": 0.988,
+  "rules": {
+    "standard": {
+      "cell_days": 4397,
+      "confirmed": 0.4746,
+      "found": 0.7893,
+      "kappa": 0.5765
+    },
+    "anteil_15": {
+      "cell_days": 3260,
+      "confirmed": 0.5669,
+      "found": 0.6989,
+      "kappa": 0.6128
+    },
+    "anteil_20": {
+      "cell_days": 2513,
+      "confirmed": 0.6339,
+      "found": 0.6025,
+      "kappa": 0.6059
+    },
+    "anteil_25": {
+      "cell_days": 1949,
+      "confirmed": 0.6809,
+      "found": 0.5019,
+      "kappa": 0.5665
+    },
+    "anteil_30": {
+      "cell_days": 1582,
+      "confirmed": 0.7111,
+      "found": 0.4255,
+      "kappa": 0.5214
+    },
+    "gpsjam_formel_auf_unsere_zahlen": {
+      "cell_days": 3970,
+      "confirmed": 0.5123,
+      "found": 0.7693,
+      "kappa": 0.6002
+    }
+  },
+  "nacp_indicator": {
+    "cell_days": 85505,
+    "both": 1526,
+    "only_ours": 1058,
+    "only_gpsjam": 1126,
+    "neither": 81795,
+    "share_ours_confirmed": 0.5906,
+    "share_gpsjam_found": 0.5754,
+    "kappa": 0.5697,
+    "spearman": 0.6188,
+    "nacp_bad_below": 8,
+    "ratio_gpsjam_to_ours_in_jammed": 0.663
+  },
+  "map_cells": {
+    "Beide: gestört": 196,
+    "Nur wir": 208,
+    "Nur gpsjam.org": 31
+  },
+  "regions": [
+    {
+      "region": "Ostsee & Baltikum",
+      "ours_km2": 198819,
+      "gpsjam_km2": 106094,
+      "cell_days": 6967,
+      "both": 850,
+      "only_ours": 1054,
+      "only_gpsjam": 161,
+      "neither": 4902,
+      "share_ours_confirmed": 0.4464,
+      "share_gpsjam_found": 0.8408,
+      "kappa": 0.4857,
+      "spearman": 0.648
+    },
+    {
+      "region": "Schwarzes Meer",
+      "ours_km2": 123894,
+      "gpsjam_km2": 72513,
+      "cell_days": 1632,
+      "both": 461,
+      "only_ours": 470,
+      "only_gpsjam": 76,
+      "neither": 625,
+      "share_ours_confirmed": 0.4952,
+      "share_gpsjam_found": 0.8585,
+      "kappa": 0.3616,
+      "spearman": 0.5641
+    },
+    {
+      "region": "Ostflanke Polen–Rumänien",
+      "ours_km2": 59155,
+      "gpsjam_km2": 37757,
+      "cell_days": 3909,
+      "both": 195,
+      "only_ours": 281,
+      "only_gpsjam": 107,
+      "neither": 3326,
+      "share_ours_confirmed": 0.4097,
+      "share_gpsjam_found": 0.6457,
+      "kappa": 0.4492,
+      "spearman": 0.66
+    },
+    {
+      "region": "Ostmittelmeer & Levante",
+      "ours_km2": 50292,
+      "gpsjam_km2": 33467,
+      "cell_days": 4683,
+      "both": 167,
+      "only_ours": 189,
+      "only_gpsjam": 68,
+      "neither": 4259,
+      "share_ours_confirmed": 0.4691,
+      "share_gpsjam_found": 0.7106,
+      "kappa": 0.5372,
+      "spearman": 0.5143
+    },
+    {
+      "region": "Kaukasus & Ostanatolien",
+      "ours_km2": 37092,
+      "gpsjam_km2": 19278,
+      "cell_days": 701,
+      "both": 115,
+      "only_ours": 177,
+      "only_gpsjam": 37,
+      "neither": 372,
+      "share_ours_confirmed": 0.3938,
+      "share_gpsjam_found": 0.7566,
+      "kappa": 0.3257,
+      "spearman": 0.5129
+    },
+    {
+      "region": "Persischer Golf",
+      "ours_km2": 17732,
+      "gpsjam_km2": 12315,
+      "cell_days": 550,
+      "both": 88,
+      "only_ours": 62,
+      "only_gpsjam": 16,
+      "neither": 384,
+      "share_ours_confirmed": 0.5867,
+      "share_gpsjam_found": 0.8462,
+      "kappa": 0.6046,
+      "spearman": 0.7552
+    },
+    {
+      "region": "Zentralanatolien",
+      "ours_km2": 14973,
+      "gpsjam_km2": 15970,
+      "cell_days": 1095,
+      "both": 95,
+      "only_ours": 13,
+      "only_gpsjam": 20,
+      "neither": 967,
+      "share_ours_confirmed": 0.8796,
+      "share_gpsjam_found": 0.8261,
+      "kappa": 0.8353,
+      "spearman": 0.5672
+    },
+    {
+      "region": "Finnland & Kola",
+      "ours_km2": 9033,
+      "gpsjam_km2": 11904,
+      "cell_days": 1377,
+      "both": 56,
+      "only_ours": 37,
+      "only_gpsjam": 66,
+      "neither": 1218,
+      "share_ours_confirmed": 0.6022,
+      "share_gpsjam_found": 0.459,
+      "kappa": 0.4812,
+      "spearman": 0.5829
+    },
+    {
+      "region": "Westrussland",
+      "ours_km2": 7130,
+      "gpsjam_km2": 5865,
+      "cell_days": 64,
+      "both": 47,
+      "only_ours": 14,
+      "only_gpsjam": 3,
+      "neither": 0,
+      "share_ours_confirmed": 0.7705,
+      "share_gpsjam_found": 0.94,
+      "kappa": -0.0837,
+      "spearman": -0.2818
+    },
+    {
+      "region": "Sonstige",
+      "ours_km2": 3097,
+      "gpsjam_km2": 2003,
+      "cell_days": 64693,
+      "both": 13,
+      "only_ours": 13,
+      "only_gpsjam": 3,
+      "neither": 64664,
+      "share_ours_confirmed": 0.5,
+      "share_gpsjam_found": 0.8125,
+      "kappa": 0.6189,
+      "spearman": 0.2793
+    }
+  ],
+  "central_europe": {
+    "cell_days": 8063,
+    "ours": 8,
+    "gpsjam": 0,
+    "both": 0
+  }
+}

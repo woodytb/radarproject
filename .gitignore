@@ -1,0 +1,14 @@
+.venv/
+.jdk/
+data/raw/
+data/silver/
+data/gold/*_spark/
+__pycache__/
+*.log
+output/video/
+data/sensitivity/
+data/ref/gpsjam/
+data/benchmark/
+.pytest_cache/
+.DS_Store
+data/gold/validation_cells.parquet

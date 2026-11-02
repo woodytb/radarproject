@@ -1,0 +1,80 @@
+{
+  "days": 14,
+  "p0": 0.0027,
+  "cell_days": 86537,
+  "cell_days_jammed": 4417,
+  "flare_ups": 83,
+  "mean_daily_jammed_area_km2": 492584,
+  "regions": [
+    {
+      "region": "Ostsee & Baltikum",
+      "days": 14,
+      "mean_area_km2": 199238.271,
+      "max_area_km2": 233249.484,
+      "mean_ratio": 0.237
+    },
+    {
+      "region": "Schwarzes Meer",
+      "days": 14,
+      "mean_area_km2": 124155.012,
+      "max_area_km2": 155420.373,
+      "mean_ratio": 0.232
+    },
+    {
+      "region": "Ostflanke Polen–Rumänien",
+      "days": 14,
+      "mean_area_km2": 59154.739,
+      "max_area_km2": 96350.902,
+      "mean_ratio": 0.156
+    },
+    {
+      "region": "Ostmittelmeer & Levante",
+      "days": 14,
+      "mean_area_km2": 50705.181,
+      "max_area_km2": 87124.984,
+      "mean_ratio": 0.176
+    },
+    {
+      "region": "Kaukasus & Ostanatolien",
+      "days": 14,
+      "mean_area_km2": 37356.413,
+      "max_area_km2": 48111.82,
+      "mean_ratio": 0.21
+    },
+    {
+      "region": "Persischer Golf",
+      "days": 13,
+      "mean_area_km2": 19096.37,
+      "max_area_km2": 28189.426,
+      "mean_ratio": 0.149
+    },
+    {
+      "region": "Zentralanatolien",
+      "days": 14,
+      "mean_area_km2": 15247.113,
+      "max_area_km2": 19511.131,
+      "mean_ratio": 0.247
+    },
+    {
+      "region": "Finnland & Kola",
+      "days": 14,
+      "mean_area_km2": 9333.201,
+      "max_area_km2": 13631.244,
+      "mean_ratio": 0.263
+    },
+    {
+      "region": "Westrussland",
+      "days": 14,
+      "mean_area_km2": 7606.324,
+      "max_area_km2": 14252.423,
+      "mean_ratio": 0.727
+    },
+    {
+      "region": "Sonstige",
+      "days": 12,
+      "mean_area_km2": 3612.756,
+      "max_area_km2": 7036.532,
+      "mean_ratio": 0.222
+    }
+  ]
+}

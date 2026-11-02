@@ -1,0 +1,296 @@
+{
+  "baseline": {
+    "nic": 7,
+    "radius": 500,
+    "share": 0.5,
+    "ratio": 0.1,
+    "min_bad": 2,
+    "alpha": 0.0001
+  },
+  "days": 14,
+  "variants": [
+    {
+      "name": "Standard",
+      "change": {},
+      "cell_days": 4378,
+      "vs_base": 1.0,
+      "area_km2": 518571,
+      "jaccard": 1.0,
+      "kept": 1.0,
+      "region_rank_spearman": 1.0,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 7,
+      "p0": 0.00268
+    },
+    {
+      "name": "NIC-Schwelle < 5",
+      "change": {
+        "nic": 5
+      },
+      "cell_days": 2998,
+      "vs_base": 0.685,
+      "area_km2": 356511,
+      "jaccard": 0.64,
+      "kept": 0.658,
+      "region_rank_spearman": 0.964,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 2,
+      "p0": 0.00201
+    },
+    {
+      "name": "NIC-Schwelle < 6",
+      "change": {
+        "nic": 6
+      },
+      "cell_days": 3283,
+      "vs_base": 0.75,
+      "area_km2": 390589,
+      "jaccard": 0.7,
+      "kept": 0.72,
+      "region_rank_spearman": 0.976,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 2,
+      "p0": 0.00211
+    },
+    {
+      "name": "NIC-Schwelle < 8",
+      "change": {
+        "nic": 8
+      },
+      "cell_days": 4668,
+      "vs_base": 1.066,
+      "area_km2": 567821,
+      "jaccard": 0.504,
+      "kept": 0.693,
+      "region_rank_spearman": 0.539,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Sonstige",
+        "Schwarzes Meer"
+      ],
+      "central_cell_days": 36,
+      "p0": 0.05774
+    },
+    {
+      "name": "Nachwirkung ab km 300",
+      "change": {
+        "radius": 300
+      },
+      "cell_days": 4108,
+      "vs_base": 0.938,
+      "area_km2": 487922,
+      "jaccard": 0.904,
+      "kept": 0.921,
+      "region_rank_spearman": 1.0,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 6,
+      "p0": 0.00206
+    },
+    {
+      "name": "Nachwirkung ab km 800",
+      "change": {
+        "radius": 800
+      },
+      "cell_days": 4595,
+      "vs_base": 1.05,
+      "area_km2": 543597,
+      "jaccard": 0.914,
+      "kept": 0.979,
+      "region_rank_spearman": 1.0,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 10,
+      "p0": 0.00345
+    },
+    {
+      "name": "Nachwirkung ab km aus",
+      "change": {
+        "radius": "aus"
+      },
+      "cell_days": 4973,
+      "vs_base": 1.136,
+      "area_km2": 590938,
+      "jaccard": 0.801,
+      "kept": 0.95,
+      "region_rank_spearman": 0.988,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 33,
+      "p0": 0.0064
+    },
+    {
+      "name": "Anteil Meldungen je Flugzeug ≥ 0.25",
+      "change": {
+        "share": 0.25
+      },
+      "cell_days": 5227,
+      "vs_base": 1.194,
+      "area_km2": 617182,
+      "jaccard": 0.812,
+      "kept": 0.983,
+      "region_rank_spearman": 1.0,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 20,
+      "p0": 0.00348
+    },
+    {
+      "name": "Anteil Meldungen je Flugzeug ≥ 0.75",
+      "change": {
+        "share": 0.75
+      },
+      "cell_days": 3200,
+      "vs_base": 0.731,
+      "area_km2": 381149,
+      "jaccard": 0.709,
+      "kept": 0.718,
+      "region_rank_spearman": 0.964,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 4,
+      "p0": 0.0019
+    },
+    {
+      "name": "Anteil Flugzeuge je Wabe ≥ 0.05",
+      "change": {
+        "ratio": 0.05
+      },
+      "cell_days": 6031,
+      "vs_base": 1.378,
+      "area_km2": 717310,
+      "jaccard": 0.726,
+      "kept": 1.0,
+      "region_rank_spearman": 0.964,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 111,
+      "p0": 0.00268
+    },
+    {
+      "name": "Anteil Flugzeuge je Wabe ≥ 0.2",
+      "change": {
+        "ratio": 0.2
+      },
+      "cell_days": 2514,
+      "vs_base": 0.574,
+      "area_km2": 297812,
+      "jaccard": 0.574,
+      "kept": 0.574,
+      "region_rank_spearman": 0.879,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Kaukasus & Ostanatolien"
+      ],
+      "central_cell_days": 0,
+      "p0": 0.00268
+    },
+    {
+      "name": "Mindestens betroffene Flugzeuge 1",
+      "change": {
+        "min_bad": 1
+      },
+      "cell_days": 4378,
+      "vs_base": 1.0,
+      "area_km2": 518571,
+      "jaccard": 1.0,
+      "kept": 1.0,
+      "region_rank_spearman": 1.0,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 7,
+      "p0": 0.00268
+    },
+    {
+      "name": "Mindestens betroffene Flugzeuge 3",
+      "change": {
+        "min_bad": 3
+      },
+      "cell_days": 4326,
+      "vs_base": 0.988,
+      "area_km2": 512581,
+      "jaccard": 0.988,
+      "kept": 0.988,
+      "region_rank_spearman": 1.0,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 7,
+      "p0": 0.00268
+    },
+    {
+      "name": "Signifikanz α 0.001",
+      "change": {
+        "alpha": 0.001
+      },
+      "cell_days": 4781,
+      "vs_base": 1.092,
+      "area_km2": 564818,
+      "jaccard": 0.916,
+      "kept": 1.0,
+      "region_rank_spearman": 1.0,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 7,
+      "p0": 0.00268
+    },
+    {
+      "name": "Signifikanz α 1e-06",
+      "change": {
+        "alpha": 1e-06
+      },
+      "cell_days": 3810,
+      "vs_base": 0.87,
+      "area_km2": 453663,
+      "jaccard": 0.87,
+      "kept": 0.87,
+      "region_rank_spearman": 0.988,
+      "top3": [
+        "Ostsee & Baltikum",
+        "Schwarzes Meer",
+        "Ostflanke Polen–Rumänien"
+      ],
+      "central_cell_days": 7,
+      "p0": 0.00268
+    }
+  ]
+}
