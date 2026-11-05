@@ -36,6 +36,7 @@ Das Vorgehen nach CRISP-DM, mit allen Phasen und Iterationen, ist in
 
 - **Gegenprobe mit [gpsjam.org](https://gpsjam.org/faq)** (`python -m gpsjam.validate_gpsjam`): Regionen-Rang 0,99; 79 % der dortigen Rotzellen finden wir, 47 % unserer Zellen sind dort rot, 83 % rot oder gelb; Cohens κ = 0,58. Die Regionen stimmen, unsere Zonen sind breiter, die Ursache ist offen. Die gpsjam-Dateien werden nur lokal zwischengespeichert (`data/ref/gpsjam/`, nicht im Repository), weil dort keine Lizenz angegeben ist.
 - **Empfindlichkeitstest** (`python -m gpsjam.sensitivity prepare`, dann `run`): Rangfolge der Regionen stabil, absolute Fläche stark schwellenabhängig. Details in [docs/CRISP-DM.md](docs/CRISP-DM.md).
+- **Beginn der Nachwirkung** (`.venv/bin/python scripts/nachwirkung_beginn.py`, Ergebnis: `data/gold/nachwirkung_beginn.json`): Aus den Rohspuren beginnen 88 % von 4.232 langen schlechten Phasen über Schwarzem Meer und Kaukasus, Ostsee oder Ostflanke. Einzelne Flüge fallen schon weit davor ab, zum Beispiel ein A350 aus Bangkok am 23.10.: NIC 0 ab dem Golf von Bengalen bis zur Landung in Frankfurt (9 h 27 min), während dort in derselben Stunde nur 2 von 190 Flugzeugen gestört waren.
 - **Tests:** `PYTHONPATH=src .venv/bin/python -m pytest tests`
 - **Leistungsvergleich** (`.venv/bin/python scripts/benchmark.py`, Median aus 2 Läufen):
 
@@ -100,7 +101,7 @@ Einzelne Stufen: `PYTHONPATH=src .venv/bin/python -m gpsjam.<modul>` mit
 ## Karte
 
 - **Gesamtkarte:** Anteil gestörter Flugzeuge je Wabe, Stunde für Stunde über 14 Tage. Ein Ring zeigt eine Wabe, die nach mindestens 12 h ohne Störung die 10 % überschreitet und in den 6 Stunden danach mindestens 3-mal gestört bleibt (774 Ereignisse).
-- **Detailansicht „Flugzeuge“** (Knopf in der Zeitleiste oder Direktlink `stoerkarte.html#ostsee`): echte Flugspuren über der Ostsee, 1 Stunde läuft in 30 Sekunden. Blau = normal, orange = gestört, hohl mit gestrichelter Spur = Nachwirkung. Gezeigt wird automatisch das Zwei-Stunden-Fenster am Tag mit den meisten betroffenen Flugzeugen (16.10., 13–15 Uhr UTC, 197 Flugzeuge), also bewusst kein Durchschnitt. Die Flugzeugkennungen werden nicht exportiert. Zwischen zwei Meldungen wird die Position linear interpoliert.
+- **Detailansicht „Flugzeuge“** (Knopf in der Zeitleiste oder Direktlink `stoerkarte.html#ostsee`): echte Flugspuren über der Ostsee, eine Stunde läuft bei 1× in 30 Sekunden. Die Karte startet mit ½× Tempo. Blau = normal, orange = gestört, hohl mit gestrichelter Spur = Nachwirkung. Gezeigt wird automatisch das Zwei-Stunden-Fenster am Tag mit den meisten betroffenen Flugzeugen (16.10., 13–15 Uhr UTC, 197 Flugzeuge), also bewusst kein Durchschnitt. Die Flugzeugkennungen werden nicht exportiert. Zwischen zwei Meldungen wird die Position linear interpoliert.
 
 ## Erklärvideo
 

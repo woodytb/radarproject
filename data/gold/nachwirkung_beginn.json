@@ -1,0 +1,61 @@
+{
+  "case_a350": {
+    "date": "2026-10-23",
+    "type": "A359",
+    "last_good": {
+      "time_utc": "06:30:21",
+      "lat": 15.86,
+      "lon": 98.47,
+      "nic": 7
+    },
+    "first_bad": {
+      "time_utc": "07:48:57",
+      "lat": 22.22,
+      "lon": 89.13,
+      "nic": 0
+    },
+    "last_bad_inbound": {
+      "time_utc": "17:16:01",
+      "lat": 50.01,
+      "lon": 8.51,
+      "alt_ft": 775,
+      "nic": 0
+    },
+    "inbound_duration": "9 h 27 min",
+    "inbound_nic_values": {
+      "0": 296
+    },
+    "distance_km": 7478,
+    "next_value_after_landing": {
+      "time_utc": "19:11:21",
+      "nic": 8
+    },
+    "return_flight_first_bad": {
+      "time_utc": "21:22:21",
+      "lat": 43.36,
+      "lon": 29.3,
+      "nic": 6
+    },
+    "frankfurt_control": {
+      "window_utc": "16:30-17:30",
+      "aircraft": 190,
+      "disturbed": 2,
+      "disturbed_with_afterglow": 2
+    }
+  },
+  "all_phases": {
+    "aircraft_days": 6153,
+    "long_phases": 4232,
+    "aircraft": 1968,
+    "duration_median_h": 1.57,
+    "onset_zone": {
+      "Schwarzes Meer und Kaukasus": 1729,
+      "Ostsee und Baltikum": 1006,
+      "Ostflanke": 990,
+      "übriges Europa": 360,
+      "außerhalb Kartenausschnitt": 79,
+      "Ostmittelmeer, Levante, Golf": 68
+    },
+    "share_core_zones_pct": 88.0
+  }
+}

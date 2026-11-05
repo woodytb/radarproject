@@ -161,7 +161,7 @@ h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spa
   <section id="dock" class="card" aria-label="Zeitsteuerung">
     <div class="ctrls">
       <button class="btn" id="play" aria-label="Abspielen"><svg viewBox="0 0 14 14" id="play-icon"><path d="M3 1.5v11l9-5.5z"/></svg></button>
-      <button class="btn" id="speed" aria-label="Geschwindigkeit">1×</button>
+      <button class="btn" id="speed" aria-label="Geschwindigkeit">½×</button>
       <button class="btn" id="zones-toggle" aria-expanded="false">Zonen</button>
       <button class="btn" id="detail-btn" aria-pressed="false">Flugzeuge</button>
     </div>
@@ -508,7 +508,7 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
 
   // ---------- Abspielen ----------
   let playing = false, speedIdx = 0, acc = 0, lastTs = 0;
-  const SPEEDS = [[1, 140], [2, 70], [4, 35]];  // ms pro Stunde
+  const SPEEDS = [[0.5, 280], [1, 140], [2, 70], [4, 35]];  // Faktor, ms pro Stunde; Start mit dem langsamsten Tempo
   const playBtn = document.getElementById('play'), icon = document.getElementById('play-icon');
   function setPlaying(p) {
     playing = p; playBtn.setAttribute('aria-label', p ? 'Pausieren' : 'Abspielen');
@@ -533,7 +533,7 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
     requestAnimationFrame(tick);
   }
   playBtn.onclick = () => setPlaying(!playing);
-  document.getElementById('speed').onclick = e => { speedIdx = (speedIdx + 1) % SPEEDS.length; e.currentTarget.textContent = SPEEDS[speedIdx][0] + '×'; };
+  document.getElementById('speed').onclick = e => { speedIdx = (speedIdx + 1) % SPEEDS.length; e.currentTarget.textContent = (SPEEDS[speedIdx][0] === 0.5 ? '½' : SPEEDS[speedIdx][0]) + '×'; };
   const zt = document.getElementById('zones-toggle');
   zt.onclick = () => { const o = document.getElementById('zones').classList.toggle('open'); zt.setAttribute('aria-expanded', o); };
   addEventListener('keydown', e => {
@@ -702,7 +702,7 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
   setFrame(Math.min(NF - 1, 12));
   const start = new Date(D.t0 * 1000), end = new Date((D.t0 + D.dur) * 1000);
   document.getElementById('detail-h').textContent = `${D.name}, ${fmtD.format(start).replace(/^\w+\.?,\s*/, '')}, ${fmtS.format(start)}–${fmtS.format(end)} UTC`;
-  document.getElementById('detail-txt').textContent = 'Echte Flugspuren, 1 Stunde läuft in 30 Sekunden. Die Waben im Hintergrund zeigen den Anteil gestörter Flugzeuge.';
+  document.getElementById('detail-txt').textContent = 'Echte Flugspuren. Bei 1× läuft eine Stunde in 30 Sekunden, bei ½× in 60. Die Waben im Hintergrund zeigen den Anteil gestörter Flugzeuge.';
   document.getElementById('d-k1').textContent = `NIC unter ${DATA.nic_bad}, bis ${nf.format(DATA.afterglow_km)} km nach Störbeginn`;
   document.getElementById('d-k2').textContent = `noch NIC unter ${DATA.nic_bad}, über ${nf.format(DATA.afterglow_km)} km nach Störbeginn`;
   document.getElementById('detail-note').textContent = `Ausgewählt: das Zwei-Stunden-Fenster am Tag mit den meisten betroffenen Flugzeugen (${nf.format(D.affected)}), also kein Durchschnitt. Die Zahlen gelten für 50–64° N, 5–36° O, also auch knapp außerhalb des Bildes. Flugzeuge ohne Meldung für mehr als 5 Minuten verschwinden kurz. Kennungen sind nicht enthalten.`;

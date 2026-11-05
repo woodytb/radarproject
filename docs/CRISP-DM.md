@@ -286,6 +286,8 @@ Rote Zellen in den 14 Nächten (02–06 Uhr UTC), Summe über die Nächte ([Graf
 
 Nicht jede entfernte Zelle ist einzeln als Fehlalarm belegt.
 
+Eine spätere Prüfung der Rohspuren ([nachwirkung_beginn.py](../scripts/nachwirkung_beginn.py), Ergebnis: [nachwirkung_beginn.json](../data/gold/nachwirkung_beginn.json)) stützt die Erklärung: 88 % von 4.232 langen schlechten Phasen beginnen über Schwarzem Meer und Kaukasus, Ostsee oder Ostflanke. Einzelne Flüge fallen schon außerhalb des Kartenausschnitts ab. Ein A350 aus Bangkok meldete am 23.10. von 07:48 bis 17:16 UTC durchgehend NIC 0, vom Golf von Bengalen bis zum Anflug auf Frankfurt. In derselben Stunde waren dort nur 2 von 190 Flugzeugen gestört, beide mit Nachwirkung, und knapp zwei Stunden später meldete die Maschine am Boden wieder NIC 8. Warum sie so früh abfiel, zeigen die Daten nicht.
+
 ### 5.7 Grenzen
 
 - Sichtbar ist nur, wo geflogen wird und Empfänger stehen. Die „Linie“ entlang der Grenze zu Belarus und der Ukraine ist vermutlich der Rand größerer Zonen.
@@ -310,7 +312,7 @@ das Deployment. Offene Punkte sind im Ausblick (6.3) festgehalten.
 | Animierte Störkarte | [output/stoerkarte.html](../output/stoerkarte.html) |
 | Diagramme | [output/charts/](../output/charts/) |
 | Kennzahlen | [data/gold/summary.json](../data/gold/summary.json) |
-| Präsentation | Foliendeck „GPS-Störradar Europa“ |
+| Präsentation | Foliendeck „Jagd auf rote Waben: GPS-Störradar Europa“ |
 | Dokumentation | [README.md](../README.md), dieses Dokument |
 
 ### 6.2 Betrieb und Wiederholbarkeit
