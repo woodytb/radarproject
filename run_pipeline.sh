@@ -24,6 +24,7 @@ if [[ "${SPARK:-0}" == "1" ]]; then
 fi
 echo "== Anomalieerkennung + Störzonen"
 $PY -m gpsjam.detect
+$PY -m gpsjam.peilung
 echo "== Karte + Diagramme"
 $PY -m gpsjam.build_map
 $PY -m gpsjam.charts

@@ -99,10 +99,11 @@ h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spa
 #tip b { font-family: var(--f-data); font-weight: 500; color: var(--heat-4); }
 #tip .m { color: var(--ink-3); font-family: var(--f-data); font-size: 10.5px; }
 
-#detail-btn[aria-pressed="true"] { background: var(--heat-2); border-color: var(--heat-3); }
-#detail-panel { display: grid; gap: 10px; }
-#detail-panel h2 { text-wrap: balance; }
-#detail-panel p { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+#detail-btn[aria-pressed="true"], #peil-btn[aria-pressed="true"] { background: var(--heat-2); border-color: var(--heat-3); }
+#detail-panel, #peil-panel { display: grid; gap: 10px; }
+#detail-panel h2, #peil-panel h2 { text-wrap: balance; }
+#detail-panel p, #peil-panel p { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ink-2); }
+.p-facts { margin: 0; padding-left: 16px; display: grid; gap: 5px; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
 .d-keys { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
 .d-keys li { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
 .d-keys svg { width: 16px; height: 16px; display: block; }
@@ -150,6 +151,17 @@ h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spa
       </ul>
       <p class="d-note" id="detail-note"></p>
     </div>
+    <div id="peil-panel" hidden>
+      <h2>Peilung: südöstliche Ostsee</h2>
+      <p id="peil-txt"></p>
+      <ul class="d-keys">
+        <li><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.5" fill="var(--heat-3)"/></svg><span>GPS fällt aus<small>NIC springt unter den Grenzwert</small></span><b id="p-n0">–</b></li>
+        <li><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.5" fill="var(--plane)"/></svg><span>GPS erholt sich<small>NIC wieder im Normalbereich</small></span><b id="p-n1">–</b></li>
+        <li><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="2.5 2.5"/><path d="M5 8h6M8 5v6" stroke="#ffffff" stroke-width="1.4"/></svg><span>Kreis durch die Übergänge<small id="p-k2"></small></span><b></b></li>
+      </ul>
+      <ul class="p-facts" id="peil-facts"></ul>
+      <p class="d-note" id="peil-note"></p>
+    </div>
   </aside>
 
   <div id="zoom">
@@ -164,6 +176,7 @@ h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spa
       <button class="btn" id="speed" aria-label="Geschwindigkeit">½×</button>
       <button class="btn" id="zones-toggle" aria-expanded="false">Zonen</button>
       <button class="btn" id="detail-btn" aria-pressed="false">Flugzeuge</button>
+      <button class="btn" id="peil-btn" aria-pressed="false" hidden>Peilung</button>
     </div>
     <div class="tl-wrap">
       <div class="tl-title"><span id="tl-title"><b>Gestörte Fläche</b> (Zellen ≥ 10 %, Tsd. km²)</span><span id="tl-val"></span></div>
@@ -276,6 +289,7 @@ const DATA = /*__DATA__*/null;
   function draw() {
     if (!proj) return;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (peil) { drawPeil(); return; }
     if (detail) { drawDetail(); return; }
     drawBase();
     // Verkehrsabdeckung (ungestört)
@@ -479,6 +493,7 @@ const DATA = /*__DATA__*/null;
   }
   function setDetail(on) {
     if (on === detail) return;
+    if (on && peil) setPeil(false, true);
     const panel = document.getElementById('detail-panel'), list = document.getElementById('zone-list'), zh = document.getElementById('zones-h');
     const btn = document.getElementById('detail-btn');
     setPlaying(false); hoverCell = -1; dHover = null; mapHovered = false; hideTip();
@@ -498,13 +513,108 @@ const DATA = /*__DATA__*/null;
       flyView(fitView(HOME), () => { if (!reduced && !detail) setPlaying(true); });
     }
   }
-  function detailFromHash() { setDetail(location.hash === '#ostsee'); }
+  function detailFromHash() {
+    if (location.hash === '#peilung' && PE) { setPeil(true); return; }
+    if (peil) setPeil(false, location.hash === '#ostsee');
+    setDetail(location.hash === '#ostsee');
+  }
   document.getElementById('detail-btn').onclick = () => {
     const on = !detail;
     try { location.hash = on ? 'ostsee' : ''; } catch (e) { /* Hash nicht verfügbar: Ansicht trotzdem wechseln */ }
     setDetail(on);
   };
   addEventListener('hashchange', detailFromHash);
+
+  // ---------- Peilung: Übergänge gut/schlecht über der Ostsee (siehe peilung.py) ----------
+  const PE = DATA.peilung;
+  let peil = false, peilDay = -1, peilAcc = 0, PLAT = null, PLON = null, PDAY = null, PKIND = null, pDayCount = null;
+  const PEIL_MS = 1400;  // ein Tag je 1,4 s bei 1×
+  const PLACES = [['Kaliningrad', 54.71, 20.51], ['Danzig', 54.35, 18.65], ['Riga', 56.95, 24.1], ['Visby', 57.64, 18.29]];
+  function decodePeil() {
+    const i16 = s => { const b = dec(s); return new Int16Array(b.buffer, b.byteOffset, b.byteLength / 2); };
+    PLAT = i16(PE.lat); PLON = i16(PE.lon); PDAY = dec(PE.day); PKIND = dec(PE.kind);
+    pDayCount = new Uint16Array(PE.dates.length); for (const d of PDAY) pDayCount[d]++;
+  }
+  const kmToPx = (lat, km) => py(lat) - py(lat + km / 111.2);
+  function drawPeil() {
+    drawBase(); drawBorders();
+    const dots = [new Path2D(), new Path2D()];
+    let n0 = 0, n1 = 0;
+    for (let i = 0; i < PLAT.length; i++) {
+      if (peilDay >= 0 && PDAY[i] !== peilDay) continue;
+      const x = px(PLON[i] / 100), y = py(PLAT[i] / 100);
+      dots[PKIND[i]].rect(x - 1.1, y - 1.1, 2.2, 2.2); PKIND[i] ? n1++ : n0++;
+    }
+    ctx.globalAlpha = peilDay >= 0 ? 0.85 : 0.5; ctx.fillStyle = tok('--plane'); ctx.fill(dots[1]);
+    ctx.fillStyle = C.h[2]; ctx.fill(dots[0]); ctx.globalAlpha = 1;
+    // Tagesmittelpunkte
+    ctx.fillStyle = '#ffffff';
+    for (const d of PE.days) { const on = peilDay >= 0 && PE.dates[peilDay] === d.date; ctx.globalAlpha = on ? 1 : 0.45; ctx.beginPath(); ctx.arc(px(d.lon), py(d.lat), on ? 4 : 2.2, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    // Kreis und Mittelpunkt
+    const cx = px(PE.center.lon), cy = py(PE.center.lat), r = kmToPx(PE.center.lat, PE.radius_km);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 9, cy); ctx.lineTo(cx + 9, cy); ctx.moveTo(cx, cy - 9); ctx.lineTo(cx, cy + 9); ctx.stroke();
+    // Orte zur Orientierung
+    ctx.font = '12px ' + tok('--f-ui'); ctx.textBaseline = 'middle';
+    for (const [name, la, lo] of PLACES) {
+      const x = px(lo), y = py(la); ctx.fillStyle = C.ink2; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, 7); ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = C.sea; ctx.strokeText(name, x + 6, y); ctx.fillText(name, x + 6, y);
+    }
+    ctx.fillStyle = '#ffffff'; ctx.font = '600 12px ' + tok('--f-ui'); ctx.lineWidth = 3; ctx.strokeStyle = C.sea;
+    ctx.strokeText('Mittelpunkt des Rings', cx + 12, cy - 12); ctx.fillText('Mittelpunkt des Rings', cx + 12, cy - 12);
+    document.getElementById('p-n0').textContent = nf.format(n0);
+    document.getElementById('p-n1').textContent = nf.format(n1);
+  }
+  function setPeilDay(d) {
+    peilDay = d;
+    const lbl = d < 0 ? `${fmtDay(PE.dates[0])}–${fmtDay(PE.dates[PE.dates.length - 1])}` : fmtDay(PE.dates[d]);
+    document.getElementById('clock-date').textContent = lbl;
+    document.getElementById('clock-time').textContent = d < 0 ? 'alle Tage' : '';
+    document.getElementById('tl-val').textContent = d < 0 ? nf.format(PE.n) + ' Übergänge' : nf.format(pDayCount[d]) + ' Übergänge an diesem Tag';
+    draw(); drawTimeline();
+  }
+  const fmtDay = s => s.slice(8, 10) + '.' + s.slice(5, 7) + '.';
+  function setPeil(on, quiet) {
+    if (on === peil) return;
+    const panel = document.getElementById('peil-panel'), list = document.getElementById('zone-list'), zh = document.getElementById('zones-h'), btn = document.getElementById('peil-btn');
+    setPlaying(false); hoverCell = -1; hideTip();
+    if (on) {
+      if (detail) setDetail(false);
+      if (!PLAT) decodePeil();
+      savedFrame = frame; peil = true; peilAcc = 0;
+      document.querySelector('#head .legend').hidden = true;
+      panel.hidden = false; list.hidden = true; zh.hidden = true;
+      document.getElementById('tl-title').innerHTML = '<b>Übergänge je Tag</b> (Ausfall und Erholung, Tsd.)';
+      btn.textContent = 'Gesamtkarte'; btn.setAttribute('aria-pressed', 'true');
+      setPeilDay(-1);
+      flyView(fitView({ lon0: PE.box.lon0, lon1: PE.box.lon1, lat0: PE.box.lat0, lat1: PE.box.lat1 }));
+    } else {
+      peil = false; panel.hidden = true; list.hidden = false; zh.hidden = false;
+      document.querySelector('#head .legend').hidden = false;
+      document.getElementById('tl-title').innerHTML = '<b>Gestörte Fläche</b> (Zellen ≥ 10 %, Tsd. km²)';
+      btn.textContent = 'Peilung'; btn.setAttribute('aria-pressed', 'false');
+      if (!quiet) { setFrame(savedFrame); flyView(fitView(HOME), () => { if (!reduced && !detail && !peil) setPlaying(true); }); }
+    }
+  }
+  function drawPeilTimeline(w, h, padL, pw, ph) {
+    const nd = PE.dates.length, mx = Math.max(...pDayCount) || 1, bw = pw / nd;
+    tctx.clearRect(0, 0, w, h);
+    tctx.font = '10.5px ' + tok('--f-data'); tctx.fillStyle = C.ink3; tctx.strokeStyle = C.grid; tctx.lineWidth = 1;
+    const gstep = mx > 2000 ? 1000 : 500;
+    tctx.textAlign = 'right'; tctx.textBaseline = 'middle';
+    for (let v = 0; v <= mx; v += gstep) { const y = 4 + ph - v / mx * ph; tctx.beginPath(); tctx.moveTo(padL, Math.round(y) + .5); tctx.lineTo(w - 4, Math.round(y) + .5); tctx.stroke(); tctx.fillText(nf.format(v / 1000), padL - 6, y); }
+    tctx.textAlign = 'center'; tctx.textBaseline = 'top';
+    for (let d = 0; d < nd; d++) {
+      const x = padL + d * bw, bh = pDayCount[d] / mx * ph, on = peilDay < 0 || peilDay === d;
+      tctx.fillStyle = on ? C.h[2] : C.h[0]; tctx.fillRect(x + 2, 4 + ph - bh, Math.max(1, bw - 4), bh);
+      if (bw > 30 || d % 2 === 0) { tctx.fillStyle = C.ink3; tctx.fillText(fmtDay(PE.dates[d]), x + bw / 2, 4 + ph + 3); }
+    }
+  }
+  if (PE) {
+    const pb = document.getElementById('peil-btn'); pb.hidden = false;
+    pb.onclick = () => { const on = !peil; try { location.hash = on ? 'peilung' : ''; } catch (e) { /* ohne Hash trotzdem wechseln */ } setPeil(on); };
+  }
 
   // ---------- Abspielen ----------
   let playing = false, speedIdx = 0, acc = 0, lastTs = 0;
@@ -518,6 +628,12 @@ const DATA = /*__DATA__*/null;
   function tick(ts) {
     if (!playing) return;
     const dt = lastTs ? ts - lastTs : 0; lastTs = ts;
+    if (peil) {
+      peilAcc += dt * SPEEDS[speedIdx][0];
+      if (peilAcc >= PEIL_MS) { peilAcc = 0; setPeilDay((peilDay + 1) % PE.dates.length); }
+      requestAnimationFrame(tick);
+      return;
+    }
     if (detail) {
       const T = dT + dt / 1000 * DETAIL_RATE * SPEEDS[speedIdx][0];
       setDetailTime(T >= D.dur - DETAIL_LEAD ? DETAIL_LEAD : T);
@@ -539,6 +655,13 @@ const DATA = /*__DATA__*/null;
   addEventListener('keydown', e => {
     if (e.target.closest('button') && e.key === ' ') return;
     if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+    if (peil) {
+      const nd = PE.dates.length;
+      if (e.key === 'ArrowRight') setPeilDay(peilDay < 0 ? 0 : (peilDay + 1) % nd);
+      if (e.key === 'ArrowLeft') setPeilDay(peilDay <= 0 ? nd - 1 : peilDay - 1);
+      if (e.key === 'Escape') setPeilDay(-1);
+      return;
+    }
     if (detail) {
       if (e.key === 'ArrowRight') setDetailTime(dT + (e.shiftKey ? 600 : 60));
       if (e.key === 'ArrowLeft') setDetailTime(dT - (e.shiftKey ? 600 : 60));
@@ -557,6 +680,7 @@ const DATA = /*__DATA__*/null;
     tl.width = w * DPR; tl.height = h * DPR; tctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     const padL = 34, padB = 16, pw = w - padL - 4, ph = h - padB - 4;
     drawTimeline.X = { padL, pw };
+    if (peil) { drawPeilTimeline(w, h, padL, pw, ph); return; }
     if (detail) { drawDetailTimeline(w, h, padL, pw, ph); return; }
     const X = f => padL + (f / (NF - 1)) * pw, Y = v => 4 + ph - (v / tMax) * ph;
     tctx.clearRect(0, 0, w, h);
@@ -613,9 +737,11 @@ const DATA = /*__DATA__*/null;
   let tlDrag = false;
   tl.addEventListener('pointerdown', e => {
     tlDrag = true; tl.setPointerCapture(e.pointerId);
+    if (peil) { const d = Math.min(PE.dates.length - 1, Math.floor(tlShare(e) * PE.dates.length)); setPlaying(false); setPeilDay(peilDay === d ? -1 : d); return; }
     if (detail) setDetailTime(tlShare(e) * D.dur); else setFrame(tlFrame(e));
   });
   tl.addEventListener('pointermove', e => {
+    if (peil) { const d = Math.min(PE.dates.length - 1, Math.floor(tlShare(e) * PE.dates.length)); tipAt(e.clientX, e.clientY - 70, `<span class="m">${fmtDay(PE.dates[d])}</span><br><b>${nf.format(pDayCount[d])}</b> Übergänge · Klick zeigt nur diesen Tag`); return; }
     if (detail) {
       const share = tlShare(e), T = share * D.dur, m = Math.min(dCounts.length - 1, Math.round(T / 60)); tlHover = share;
       if (tlDrag) setDetailTime(T); else drawTimeline();
@@ -652,6 +778,7 @@ const DATA = /*__DATA__*/null;
       view.cx -= (e.clientX - prev[0]) / view.k; view.cy += (e.clientY - prev[1]) / view.k; project(); draw(); hideTip(); return;
     }
     lastPt = [e.clientX - r.left, e.clientY - r.top];
+    if (peil) return;
     if (detail) { mapHovered = true; draw(); planeTip(); return; }
     hoverCell = hit(...lastPt); draw(); hoverCell >= 0 ? showTip() : hideTip();
   });
@@ -661,7 +788,7 @@ const DATA = /*__DATA__*/null;
   map.addEventListener('dblclick', e => { const r = map.getBoundingClientRect(); zoomAt(2, e.clientX - r.left, e.clientY - r.top); });
   document.getElementById('zin').onclick = () => zoomAt(1.5, W / 2, H / 2);
   document.getElementById('zout').onclick = () => zoomAt(1 / 1.5, W / 2, H / 2);
-  document.getElementById('zreset').onclick = () => { fit(detail ? D.box : HOME); project(); draw(); };
+  document.getElementById('zreset').onclick = () => { fit(peil ? { lon0: PE.box.lon0, lon1: PE.box.lon1, lat0: PE.box.lat0, lat1: PE.box.lat1 } : detail ? D.box : HOME); project(); draw(); };
   const STATE_TXT = ['Normal', 'Gestört', 'Nachwirkung'];
   function planeTip() {
     if (!dHover) { hideTip(); return; }
@@ -706,7 +833,20 @@ const DATA = /*__DATA__*/null;
   document.getElementById('d-k1').textContent = `NIC unter ${DATA.nic_bad}, bis ${nf.format(DATA.afterglow_km)} km nach Störbeginn`;
   document.getElementById('d-k2').textContent = `noch NIC unter ${DATA.nic_bad}, über ${nf.format(DATA.afterglow_km)} km nach Störbeginn`;
   document.getElementById('detail-note').textContent = `Ausgewählt: das Zwei-Stunden-Fenster am Tag mit den meisten betroffenen Flugzeugen (${nf.format(D.affected)}), also kein Durchschnitt. Die Zahlen gelten für 50–64° N, 5–36° O, also auch knapp außerhalb des Bildes. Flugzeuge ohne Meldung für mehr als 5 Minuten verschwinden kurz. Kennungen sind nicht enthalten.`;
-  if (location.hash === '#ostsee') detailFromHash();
+  if (PE) {
+    const pct = v => Math.round(v * 100) + ' %', dir = PE.direction, alt = PE.altitude;
+    document.getElementById('peil-txt').textContent = `Jeder Punkt ist eine Stelle, an der ein Flugzeug sein GPS verliert (orange) oder zurückbekommt (blau). Zusammen bilden die Punkte einen Ring. Weiße Punkte: Mittelpunkt je Tag. Play oder Klick auf die Zeitleiste zeigt einzelne Tage.`;
+    document.getElementById('p-k2').textContent = `Radius rund ${nf.format(PE.radius_km)} km`;
+    const facts = [
+      `Mittelpunkt ${PE.center.lat.toFixed(2).replace('.', ',')}° N, ${PE.center.lon.toFixed(2).replace('.', ',')}° O, rund ${PE.center_to_km['Kaliningrad']} km nördlich von Kaliningrad über der Ostsee.`,
+      `Stabil: An ${PE.days_within_20km} von ${PE.days.length} Tagen liegt der Tagesmittelpunkt höchstens 20 km daneben.`,
+      `Richtung: Beim Ausfall fliegen ${pct(dir['Kaliningrad'].toward)} der Maschinen auf Kaliningrad zu, ${pct(dir['Baltijsk'].toward)} auf Baltijsk, ${pct(dir['Danzig'].toward)} auf Danzig. Gegenprobe: Gotland ${pct(dir['Gotland (Kontrolle)'].toward)}, Riga ${pct(dir['Riga (Kontrolle)'].toward)}.`,
+      `Höhentest: Bei einem einzelnen Sender am Boden müsste der Ring mit der Flughöhe wachsen (Funkhorizont ${alt[0].horizon_km} → ${alt[alt.length - 1].horizon_km} km). Gemessen: ${alt.map(b => b.median_km).join(', ')} km, praktisch kein Zusammenhang.`,
+    ];
+    const fl = document.getElementById('peil-facts'); facts.forEach(f => { const li = document.createElement('li'); li.textContent = f; fl.append(li); });
+    document.getElementById('peil-note').textContent = 'Der Mittelpunkt ist ein Schwerpunkt der Störung, kein Senderstandort. Kaliningrad, Baltijsk und Danzig passen gleich gut, und der Höhentest spricht gegen einen einzelnen Sender am Boden. Feste Flugrouten können den Ring mitformen. Übergänge ab 5.000 ft, Meldungen höchstens 3 min auseinander, nur im gezeigten Ausschnitt 51–59° N, 12–29° O.';
+  }
+  if (location.hash === '#ostsee' || location.hash === '#peilung') detailFromHash();
   else if (!reduced) setPlaying(true);
 })();
 </script>

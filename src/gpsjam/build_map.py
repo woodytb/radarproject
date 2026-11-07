@@ -4,8 +4,8 @@ Pro Stunde ein Frame; jeder Wert ist der Anteil gestörter Flugzeuge in
 einem gleitenden 3-Stunden-Fenster (glättet nächtliche Verkehrslücken).
 Die Daten werden kompakt als Base64-Uint8-Matrizen eingebettet.
 
-Dazu kommen die Ringe beim Aufflammen (flare_onsets) und die Detailansicht mit
-einzelnen Flugzeugen (detail_flights). Die Flugzeugdaten sind anonymisiert: Die
+Dazu kommen die Ringe beim Aufflammen (flare_onsets), die Detailansicht mit
+einzelnen Flugzeugen (detail_flights) und die Peilung (peilung.py, falls berechnet). Die Flugzeugdaten sind anonymisiert: Die
 Kennung (ICAO) wird nur zum Bilden der Spuren verwendet und nicht exportiert.
 
     python -m gpsjam.build_map
@@ -202,6 +202,7 @@ def build() -> str:
         land=_land(), summary={k: v for k, v in summary.items() if k != "top_zones"},
         onsets=flare_onsets(ratio), detail=detail_flights(), nic_bad=C.NIC_BAD_BELOW,
         afterglow_km=C.AFTERGLOW_MAX_KM,
+        peilung=json.loads((C.GOLD_DIR / "peilung.json").read_text()) if (C.GOLD_DIR / "peilung.json").exists() else None,
     )
     html = TEMPLATE.read_text().replace("/*__DATA__*/null", json.dumps(data, separators=(",", ":")))
     C.OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

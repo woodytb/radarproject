@@ -292,7 +292,7 @@ Eine spätere Prüfung der Rohspuren ([nachwirkung_beginn.py](../scripts/nachwir
 
 - Sichtbar ist nur, wo geflogen wird und Empfänger stehen. Die „Linie“ entlang der Grenze zu Belarus und der Ukraine ist vermutlich der Rand größerer Zonen.
 - NIC unterscheidet nicht zwischen Jamming und Spoofing.
-- Der Zonenschwerpunkt ist kein Senderstandort.
+- Der Zonenschwerpunkt ist kein Senderstandort, und auch der Mittelpunkt der Peilung (5.9) ist keiner.
 - Es gibt keine Liste echter Störsender, also keine Trefferquote im strengen Sinn.
 - 14 Tage reichen für ein Lagebild, nicht für Trends.
 
@@ -300,6 +300,36 @@ Eine spätere Prüfung der Rohspuren ([nachwirkung_beginn.py](../scripts/nachwir
 
 Das Modell ist für den Zweck (Lagebild, Kurspräsentation) geeignet und geht in
 das Deployment. Offene Punkte sind im Ausblick (6.3) festgehalten.
+
+### 5.9 Peilung der Ostsee-Störung (Zyklus 4, 07.11.)
+
+Frage: Lässt sich die Störung über der Ostsee genauer eingrenzen als über
+Zonenschwerpunkte, die nur zeigen, wo die betroffenen Flugzeuge fliegen?
+Code: [peilung.py](../src/gpsjam/peilung.py), Ergebnis:
+[peilung.json](../data/gold/peilung.json), Ansicht „Peilung“ in der Störkarte.
+
+**Vorgehen.** Je Flug werden die Übergänge gut → schlecht (Ausfall) und
+schlecht → gut (Erholung) bestimmt: zwei Meldungen höchstens 3 min
+auseinander, beide ab 5.000 ft, ohne Nachwirkung. Im Ausschnitt 51–59° N,
+12–29° O sind das 32.122 Übergänge (17.913 Ausfälle, 14.209 Erholungen). Durch
+sie wird ein Kreis gelegt: RANSAC mit Band ±20 km, danach der Mittelpunkt mit
+der geringsten Streuung der Abstände.
+
+| Prüfung | Ergebnis |
+|---|---|
+| Kreis | Mittelpunkt 55,58° N, 20,77° O, rund 98 km nördlich von Kaliningrad über der Ostsee; Radius 218 km; Streuung 16 km |
+| Stabilität | An 13 von 14 Tagen liegt der Tagesmittelpunkt höchstens 20 km daneben |
+| Richtung beim Ausfall | Auf Kaliningrad zu 72 %, Baltijsk 73 %, Danzig 69 %; Kontrollorte Gotland 50 %, Riga 38 % |
+| Höhentest | Ein einzelner Sender am Boden müsste den Ring mit der Flughöhe wachsen lassen (Funkhorizont 250 → 483 km). Gemessen je Höhenband 226, 272, 275, 268, 258 km; Spearman Höhe–Abstand 0,07 |
+
+**Bewertung.** Die Störung hat einen klaren Schwerpunkt in der südöstlichen
+Ostsee, Richtung Kaliningrad, und die Kontrollorte zeigen dieses Muster nicht.
+Ein Standort lässt sich nicht peilen: Kaliningrad, Baltijsk und Danzig passen
+gleich gut. Der gescheiterte Höhentest spricht gegen einen einzelnen Sender
+am Boden mit Sichtverbindung; mehrere Sender oder eine begrenzte Sendeleistung
+wären denkbar, belegt ist das nicht. Feste Flugrouten können den Ring
+mitformen, weil jeden Tag an denselben Stellen geflogen wird. Die Aussage
+bleibt deshalb: Schwerpunkt der Störung, kein Senderstandort.
 
 ---
 
@@ -309,7 +339,7 @@ das Deployment. Offene Punkte sind im Ausblick (6.3) festgehalten.
 
 | Artefakt | Datei |
 |---|---|
-| Animierte Störkarte | [output/stoerkarte.html](../output/stoerkarte.html) |
+| Animierte Störkarte mit Flugzeugansicht und Peilung | [output/stoerkarte.html](../output/stoerkarte.html) |
 | Diagramme | [output/charts/](../output/charts/) |
 | Kennzahlen | [data/gold/summary.json](../data/gold/summary.json) |
 | Präsentation | Foliendeck „Jagd auf rote Waben: GPS-Störradar Europa“ |
@@ -327,7 +357,7 @@ das Deployment. Offene Punkte sind im Ausblick (6.3) festgehalten.
 - Echtzeit: adsb.lol-Live-API mit Kafka und Spark Structured Streaming.
 - Spoofing-Erkennung über physikalisch unmögliche Positionssprünge.
 - Längere Zeiträume auf einem Cluster; der Spark-Job läuft unverändert.
-- Eingrenzung von Senderstandorten über die Eintrittspunkte vieler Flüge in eine Zone.
+- Eingrenzung von Senderstandorten über die Eintrittspunkte vieler Flüge in eine Zone: für die Ostsee begonnen (5.9), dort bisher nur als Schwerpunkt; nächster Schritt wären Modelle mit mehreren Sendern.
 
 ---
 
@@ -342,6 +372,7 @@ das Deployment. Offene Punkte sind im Ausblick (6.3) festgehalten.
 | 5 | Deployment | Downloads brechen bei 2 GB ab; Dask-Cluster hängt | Verbindungsabbrüche bei GitHub; Laptop schläft im Akkubetrieb | Data Preparation | Fortsetzbare Downloads; Thread-Modus ohne Worker-Prozesse; Zwischenzeitlich nur 8 Tage, am Netzteil später auf 14 lückenlose Tage erweitert |
 | 6 | Data Understanding | Testabruf airplanes.live liefert 403 | Kein freier Zugriff | Business Understanding | adsb.lol als Hauptquelle |
 | 7 | Evaluation | Gegenprobe mit gpsjam.org: gleiche Regionen, unsere Zonen deutlich breiter | Offen; Schwellen, Formel und NACp erklären es nicht | Modeling | Varianten geprüft, Verfahren bewusst unverändert; Flächenaussage nur noch mit Definition |
+| 8 | Evaluation | Peilung der Ostsee: Ring stabil, aber sein Radius wächst nicht mit der Flughöhe | Kein einzelner Sender am Boden mit Sichtverbindung, oder feste Flugrouten formen den Ring mit | Business Understanding | Aussage auf „Schwerpunkt der Störung“ begrenzt, kein Senderstandort |
 
 Iteration 1 bis 3 zeigen den Kern von CRISP-DM: Erst die Evaluation der Karte
 hat einen Datenqualitätseffekt aufgedeckt, der in keiner Kennzahl auffiel. Die
