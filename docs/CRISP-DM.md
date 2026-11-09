@@ -372,7 +372,8 @@ bleibt deshalb: Schwerpunkt der Störung, kein Senderstandort.
 | 5 | Deployment | Downloads brechen bei 2 GB ab; Dask-Cluster hängt | Verbindungsabbrüche bei GitHub; Laptop schläft im Akkubetrieb | Data Preparation | Fortsetzbare Downloads; Thread-Modus ohne Worker-Prozesse; Zwischenzeitlich nur 8 Tage, am Netzteil später auf 14 lückenlose Tage erweitert |
 | 6 | Data Understanding | Testabruf airplanes.live liefert 403 | Kein freier Zugriff | Business Understanding | adsb.lol als Hauptquelle |
 | 7 | Evaluation | Gegenprobe mit gpsjam.org: gleiche Regionen, unsere Zonen deutlich breiter | Offen; Schwellen, Formel und NACp erklären es nicht | Modeling | Varianten geprüft, Verfahren bewusst unverändert; Flächenaussage nur noch mit Definition |
-| 8 | Evaluation | Peilung der Ostsee: Ring stabil, aber sein Radius wächst nicht mit der Flughöhe | Kein einzelner Sender am Boden mit Sichtverbindung, oder feste Flugrouten formen den Ring mit | Business Understanding | Aussage auf „Schwerpunkt der Störung“ begrenzt, kein Senderstandort |
+| 8 | Evaluation | Bewertungsbogen verlangt einen Entscheidungsbezug; die Rohspuren zeigen die Grenzen des Verfahrens | Die Frage war nur beschreibend | Business Understanding | Frage auf die Flugvorbereitung geschärft, Empfehlung mit Grenzen formuliert |
+| 9 | Evaluation | Peilung der Ostsee: Ring stabil, aber sein Radius wächst nicht mit der Flughöhe | Kein einzelner Sender am Boden mit Sichtverbindung, oder feste Flugrouten formen den Ring mit | Business Understanding | Aussage auf „Schwerpunkt der Störung“ begrenzt, kein Senderstandort |
 
 Iteration 1 bis 3 zeigen den Kern von CRISP-DM: Erst die Evaluation der Karte
 hat einen Datenqualitätseffekt aufgedeckt, der in keiner Kennzahl auffiel. Die
