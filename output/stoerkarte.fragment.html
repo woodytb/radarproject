@@ -49,6 +49,26 @@ h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spa
 .ramp-l { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; font-family: var(--f-data); font-size: 10.5px; color: var(--ink-3); }
 .legend-note { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; }
 
+#cockpit {
+  position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px));
+  width: min(340px, calc(100% - 32px)); padding: 14px 16px 12px; display: grid; gap: 10px; z-index: 3;
+}
+.ck-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ck-time { font-family: var(--f-data); font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ck-nic { display: flex; align-items: baseline; gap: 12px; }
+.ck-nic b { font-family: var(--f-data); font-weight: 500; font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; transition: color .3s; }
+.ck-nic span { font-family: var(--f-data); font-size: 13px; letter-spacing: .08em; color: var(--ink-3); text-transform: uppercase; }
+.ck-gauge { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; position: relative; }
+.ck-gauge i { height: 14px; border-radius: 2px; background: var(--grid); transition: background .3s; }
+.ck-scale { display: grid; grid-template-columns: repeat(12, 1fr); font-family: var(--f-data); font-size: 10px; color: var(--ink-3); text-align: center; }
+.ck-rc { margin: 0; font-size: 15px; line-height: 1.35; }
+.ck-state { font-size: 13px; color: var(--ink-2); }
+.ck-state b { font-weight: 600; }
+#ck-spark { width: 100%; height: 64px; display: block; }
+.ck-row { display: flex; justify-content: space-between; gap: 10px; font-family: var(--f-data); font-size: 12px; color: var(--ink-3); }
+.ck-note { font-size: 11px; color: var(--ink-3); line-height: 1.35; margin: 0; }
+#ck-close { justify-self: start; }
+#follow-btn { width: 100%; justify-content: center; background: var(--heat-2); border-color: var(--heat-3); }
 #clock { font-family: var(--f-data); font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-top: 6px; border-top: 1px solid var(--panel-line); }
 #clock-date { font-size: 18px; font-weight: 500; color: var(--ink); }
 #clock-time { font-size: 18px; color: var(--heat-3); }
@@ -138,6 +158,18 @@ h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spa
     <div id="clock" aria-live="off"><span id="clock-date">–</span><span id="clock-time">–</span><span id="clock-utc">UTC</span></div>
   </header>
 
+  <section id="cockpit" class="card" hidden aria-label="Cockpit-Anzeige des verfolgten Flugzeugs">
+    <div class="ck-top"><span class="eyebrow">Cockpit · verfolgtes Flugzeug</span><span class="ck-time" id="ck-time">–</span></div>
+    <div class="ck-nic"><b id="ck-nic">–</b><span>NIC<br>Integrität</span></div>
+    <div><div class="ck-gauge" id="ck-gauge"></div><div class="ck-scale" id="ck-scale"></div></div>
+    <p class="ck-rc" id="ck-rc">–</p>
+    <div class="ck-state" id="ck-state">–</div>
+    <canvas id="ck-spark" aria-label="NIC-Verlauf der letzten 20 Minuten"></canvas>
+    <div class="ck-row"><span>NIC der letzten 20 min</span><span id="ck-speed">–</span></div>
+    <p class="ck-note">Garantierter Radius nach ADS-B-Standard, vereinfacht. Kennung nicht gezeigt.</p>
+    <button class="btn" id="ck-close">Verfolgung beenden (Esc)</button>
+  </section>
+
   <aside id="zones" class="card" aria-label="Störzonen des Tages">
     <h2 id="zones-h">Störzonen</h2>
     <ul id="zone-list"></ul>
@@ -149,6 +181,8 @@ h1 { margin: 0; font-size: 26px; line-height: 1.05; font-weight: 700; letter-spa
         <li><svg viewBox="0 0 16 16"><path d="M8 1 13 14 8 11 3 14z" fill="var(--heat-3)"/></svg><span>Gestört<small id="d-k1"></small></span><b id="d-n1">–</b></li>
         <li><svg viewBox="0 0 16 16"><path d="M8 1 13 14 8 11 3 14z" fill="none" stroke="var(--heat-4)" stroke-width="1.6"/></svg><span>Nachwirkung<small id="d-k2"></small></span><b id="d-n2">–</b></li>
       </ul>
+      <button class="btn" id="follow-btn">Gestörtes Flugzeug verfolgen</button>
+      <p class="d-note">Oder ein Flugzeug in der Karte anklicken.</p>
       <p class="d-note" id="detail-note"></p>
     </div>
     <div id="peil-panel" hidden>
@@ -440,7 +474,8 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
     drawDetailBase();
     const T = dT, trails = [new Path2D(), new Path2D(), new Path2D()], marks = [new Path2D(), new Path2D(), new Path2D()];
     dPlanes = [];
-    for (const tr of tracks) {
+    for (let ti = 0; ti < tracks.length; ti++) {
+      const tr = tracks[ti];
       const i = indexAt(tr, T);
       if (i < 0) continue;
       const f = (T - tr.t[i]) / (tr.t[i + 1] - tr.t[i]), lon = tr.x[i] + (tr.x[i + 1] - tr.x[i]) * f, lat = tr.y[i] + (tr.y[i + 1] - tr.y[i]) * f;
@@ -456,7 +491,7 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
       }
       const ang = Math.atan2(py(tr.y[i + 1]) - py(tr.y[i]), px(tr.x[i + 1]) - px(tr.x[i]));
       planeMark(marks[state], sx, sy, ang, state === 0 ? 3.4 : 5.2);
-      dPlanes.push([sx, sy, tr.nic[i], state]);
+      dPlanes.push([sx, sy, tr.nic[i], state, ti]);
     }
     const plane = tok('--plane');
     ctx.lineCap = 'round';
@@ -468,6 +503,7 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
     ctx.lineWidth = 1.6; ctx.strokeStyle = C.h[3]; ctx.fillStyle = C.sea; ctx.fill(marks[2]); ctx.strokeStyle = C.h[3]; ctx.stroke(marks[2]);
     dHover = lastPt && mapHovered ? nearestPlane() : null;
     if (dHover) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(dHover[0], dHover[1], 10, 0, 2 * Math.PI); ctx.stroke(); }
+    if (follow >= 0) drawFollow(T);
   }
   let dPlanes = [], mapHovered = false;
   function nearestPlane() {
@@ -506,6 +542,7 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
       setDetailTime(DETAIL_LEAD);
       flyView(fitView(D.box), () => { if (!reduced && detail) setPlaying(true); });
     } else {
+      stopFollow();
       detail = false; panel.hidden = true; list.hidden = false; zh.hidden = false;
       document.getElementById('tl-title').innerHTML = '<b>Gestörte Fläche</b> (Zellen ≥ 10 %, Tsd. km²)';
       btn.textContent = 'Flugzeuge'; btn.setAttribute('aria-pressed', 'false');
@@ -524,6 +561,102 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
     setDetail(on);
   };
   addEventListener('hashchange', detailFromHash);
+
+  // ---------- Cockpit: einem Flugzeug folgen ----------
+  const RC = ['keine Garantie mehr', 'unter 37 km', 'unter 15 km', 'unter 7,4 km', 'unter 3,7 km', 'unter 1,9 km', 'unter 1,1 km', 'unter 370 m', 'unter 185 m', 'unter 75 m', 'unter 25 m', 'unter 7,5 m'];
+  let follow = -1, ckLast = '', ckFlyAt = 0, ckEnd = 0;  // ckFlyAt: Start der letzten Kamerafahrt, damit sich Fahrten nicht gegenseitig abbrechen
+  const cockpit = document.getElementById('cockpit'), head = document.getElementById('head');
+  const gauge = document.getElementById('ck-gauge'), scale = document.getElementById('ck-scale');
+  for (let n = 0; n <= 11; n++) { gauge.append(document.createElement('i')); const s = document.createElement('span'); s.textContent = n % 2 === 0 || n === 7 ? n : ''; scale.append(s); }
+  function posAt(tr, T) {
+    const i = indexAt(tr, T); if (i < 0) return null;
+    const f = (T - tr.t[i]) / (tr.t[i + 1] - tr.t[i]);
+    return { i, lon: tr.x[i] + (tr.x[i + 1] - tr.x[i]) * f, lat: tr.y[i] + (tr.y[i + 1] - tr.y[i]) * f };
+  }
+  const kmBetween = (a1, o1, a2, o2) => { const r = Math.PI / 180, dA = (a2 - a1) * r, dO = (o2 - o1) * r; const h = Math.sin(dA / 2) ** 2 + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(dO / 2) ** 2; return 12742 * Math.asin(Math.sqrt(h)); };
+  function startFollow(ti) {
+    if (ti < 0 || !tracks[ti]) return;
+    follow = ti; ckLast = ''; ckEnd = 0; cockpit.hidden = false; head.hidden = true;
+    const p = posAt(tracks[ti], dT); if (!p) { stopFollow(); return; }
+    const kD = fitView(D.box).k;
+    ckFlyAt = performance.now();
+    flyView({ cx: p.lon * RAD, cy: my(p.lat), k: Math.max(view.k, kD * 2.4) });
+    if (!reduced && !playing) setPlaying(true);
+    updateCockpit(dT);
+  }
+  function stopFollow() { if (follow < 0) return; follow = -1; cockpit.hidden = true; head.hidden = false; draw(); }
+  function pickDemo() {   // ein Flugzeug, das gerade normal fliegt und in 1-15 min gestört wird; sonst eines, das gestört ist
+    let best = -1, bestDt = Infinity, fallback = -1;
+    tracks.forEach((tr, ti) => {
+      const i = indexAt(tr, dT); if (i < 0) return;
+      if (stateOf(tr, i) === 1 && fallback < 0) fallback = ti;
+      if (stateOf(tr, i) !== 0) return;
+      for (let j = i + 1; j < tr.n && tr.t[j] <= dT + 900; j++) {
+        if (stateOf(tr, j) === 1) { const d = tr.t[j] - dT; if (d >= 60 && d < bestDt && tr.t[tr.n - 1] > tr.t[j] + 900) { bestDt = d; best = ti; } break; }
+      }
+    });
+    return best >= 0 ? best : fallback;
+  }
+  function drawFollow(T) {
+    const tr = tracks[follow], p = posAt(tr, T);
+    if (!p) {
+      ckState('Keine Meldung mehr: Das Flugzeug hat den Ausschnitt verlassen oder ist kurz ohne Empfang.');
+      if (!ckEnd) ckEnd = performance.now(); else if (performance.now() - ckEnd > 3000) stopFollow();
+      return;
+    }
+    ckEnd = 0;
+    const sx = px(p.lon), sy = py(p.lat);
+    // lange Spur der letzten 30 Minuten
+    ctx.lineWidth = 2.5; ctx.globalAlpha = 0.9;
+    for (let k = p.i; k > 0 && tr.t[k - 1] >= T - 1800; k--) {
+      ctx.strokeStyle = stateOf(tr, k - 1) ? C.h[2] : tok('--plane');
+      ctx.beginPath(); ctx.moveTo(px(tr.x[k]), py(tr.y[k])); ctx.lineTo(px(tr.x[k - 1]), py(tr.y[k - 1])); ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(sx, sy, 16, 0, 2 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx, sy, 24, 0, 2 * Math.PI); ctx.globalAlpha = 0.35; ctx.stroke(); ctx.globalAlpha = 1;
+    // Kamera nachführen, wenn das Flugzeug den mittleren Bereich verlässt
+    if ((Math.abs(sx - W / 2) > W * 0.12 || Math.abs(sy - H / 2) > H * 0.12) && performance.now() - ckFlyAt > 900) { ckFlyAt = performance.now(); flyView({ cx: p.lon * RAD, cy: my(p.lat), k: view.k }); }
+    updateCockpit(T);
+  }
+  function ckState(txt) { document.getElementById('ck-state').textContent = txt; }
+  function updateCockpit(T) {
+    const tr = tracks[follow]; if (!tr) return;
+    const p = posAt(tr, T); if (!p) return;
+    const nic = tr.nic[p.i], st = stateOf(tr, p.i);
+    document.getElementById('ck-time').textContent = fmtS.format(new Date((D.t0 + T) * 1000)) + ' UTC';
+    const key = nic + ':' + st + ':' + Math.floor(T / 20);
+    if (key === ckLast) return; ckLast = key;
+    const col = st === 0 ? tok('--plane') : st === 1 ? C.h[2] : C.h[3];
+    const nb = document.getElementById('ck-nic'); nb.textContent = nic; nb.style.color = col;
+    [...gauge.children].forEach((g, n) => { g.style.background = n <= nic ? col : ''; });
+    document.getElementById('ck-rc').innerHTML = nic === 0 ? '<b>Position: keine Garantie mehr</b>' : `Position garantiert auf <b>${RC[nic]}</b>`;
+    let j = p.i; while (j > 0 && stateOf(tr, j - 1) === st) j--;
+    const since = Math.max(0, Math.round((T - tr.t[j]) / 60));
+    const label = st === 0 ? 'Normal' : st === 1 ? 'Gestört' : 'Nachwirkung';
+    const sinceTxt = j === 0 ? `seit mindestens ${since} min` : `seit ${since} min`;
+    ckState(''); const s = document.getElementById('ck-state'); s.innerHTML = `<b style="color:${col}">${label}</b> · ${sinceTxt}${st === 2 ? ' · mehr als ' + nf.format(DATA.afterglow_km) + ' km nach Störbeginn' : ''}`;
+    const i2 = Math.min(tr.n - 1, p.i + 1), dt = tr.t[i2] - tr.t[p.i];
+    document.getElementById('ck-speed').textContent = dt > 0 ? 'rund ' + nf.format(Math.round(kmBetween(tr.y[p.i], tr.x[p.i], tr.y[i2], tr.x[i2]) / dt * 3600 / 10) * 10) + ' km/h' : '–';
+    drawSpark(tr, T);
+  }
+  function drawSpark(tr, T) {
+    const cv = document.getElementById('ck-spark'), w = cv.clientWidth, h = cv.clientHeight; if (!w) return;
+    cv.width = w * DPR; cv.height = h * DPR; const g = cv.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, w, h);
+    const X = t => (t - (T - 1200)) / 1200 * w, Y = n => 4 + (1 - n / 11) * (h - 8);
+    g.strokeStyle = C.grid; g.lineWidth = 1; g.beginPath(); g.moveTo(0, Y(7) + .5); g.lineTo(w, Y(7) + .5); g.stroke();
+    g.fillStyle = C.ink3; g.font = '10px ' + tok('--f-data'); g.fillText('7', 2, Y(7) - 3);
+    let started = false; g.lineWidth = 2;
+    for (let k = 0; k < tr.n - 1; k++) {
+      if (tr.t[k + 1] < T - 1200 || tr.t[k] > T) continue;
+      g.strokeStyle = stateOf(tr, k) ? C.h[2] : tok('--plane');
+      g.beginPath(); g.moveTo(Math.max(0, X(tr.t[k])), Y(tr.nic[k])); g.lineTo(X(Math.min(T, tr.t[k + 1])), Y(tr.nic[k])); g.stroke();
+      started = true;
+    }
+    if (!started) { g.fillStyle = C.ink3; g.fillText('noch kein Verlauf', 8, h / 2); }
+  }
+  document.getElementById('ck-close').onclick = stopFollow;
+  document.getElementById('follow-btn').onclick = () => { const ti = pickDemo(); if (ti >= 0) startFollow(ti); };
 
   // ---------- Peilung: Übergänge gut/schlecht über der Ostsee (siehe peilung.py) ----------
   const PE = DATA.peilung;
@@ -663,6 +796,8 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
       return;
     }
     if (detail) {
+      if (e.key === 'Escape') stopFollow();
+      if (e.key === 'f' || e.key === 'F') { const ti = pickDemo(); if (ti >= 0) startFollow(ti); }
       if (e.key === 'ArrowRight') setDetailTime(dT + (e.shiftKey ? 600 : 60));
       if (e.key === 'ArrowLeft') setDetailTime(dT - (e.shiftKey ? 600 : 60));
       return;
@@ -764,7 +899,8 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
     project(); draw();
   }
   map.addEventListener('wheel', e => { e.preventDefault(); const r = map.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
-  map.addEventListener('pointerdown', e => { pointers.set(e.pointerId, [e.clientX, e.clientY]); map.setPointerCapture(e.pointerId); drag = [e.clientX, e.clientY]; map.classList.add('dragging'); });
+  let downAt = null;
+  map.addEventListener('pointerdown', e => { downAt = [e.clientX, e.clientY]; pointers.set(e.pointerId, [e.clientX, e.clientY]); map.setPointerCapture(e.pointerId); drag = [e.clientX, e.clientY]; map.classList.add('dragging'); });
   map.addEventListener('pointermove', e => {
     const r = map.getBoundingClientRect();
     if (pointers.has(e.pointerId)) {
@@ -782,7 +918,17 @@ const DATA = {"t0":1792022400,"n_frames":336,"n_cells":6881,"polys":[[24.918,70.
     if (detail) { mapHovered = true; draw(); planeTip(); return; }
     hoverCell = hit(...lastPt); draw(); hoverCell >= 0 ? showTip() : hideTip();
   });
-  const up = e => { pointers.delete(e.pointerId); if (!pointers.size) { drag = null; map.classList.remove('dragging'); } };
+  const up = e => {
+    const click = downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 5 && pointers.size === 1;
+    pointers.delete(e.pointerId); if (!pointers.size) { drag = null; map.classList.remove('dragging'); }
+    if (click && detail && e.type === 'pointerup') {
+      const r = map.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      let best = null, bd = 18 * 18;
+      for (const p of dPlanes) { const d = (p[0] - x) ** 2 + (p[1] - y) ** 2; if (d < bd) { bd = d; best = p; } }
+      if (best) startFollow(best[4]);
+    }
+    downAt = null;
+  };
   map.addEventListener('pointerup', up); map.addEventListener('pointercancel', up);
   map.addEventListener('pointerleave', () => { hoverCell = -1; dHover = null; mapHovered = false; hideTip(); draw(); });
   map.addEventListener('dblclick', e => { const r = map.getBoundingClientRect(); zoomAt(2, e.clientX - r.left, e.clientY - r.top); });
